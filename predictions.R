@@ -9,9 +9,11 @@ library(rstan)
 library(bayesplot)
 # In stan there wasn't a skellam_rng and the R base rskellam are "wrong"
 source("utils/my_skellam.R")
+# Decide if learn the online model or not
+ONLINE_MODEL= TRUE
 
 #-------------------------------------------------------------------------------
-# Prepare the test-set
+# Prepare the test-set (the unknown matchday 36)
 #-------------------------------------------------------------------------------
 SerieA_2324<- read.csv(file="data/season_2324/SerieA_2324.csv")
 teams<- unique(SerieA_2324$HomeTeam)
@@ -29,7 +31,12 @@ at= unlist(sapply(1:nrow(test_set),function (g) which(teams==test_set$AwayTeam[g
 # Load the fitted stan model and make predictions
 #-------------------------------------------------------------------------------
 # Load the model trained up to matchday 35
-load(file = "stan/models/matchday35/KN_matchday35.rds")
+if(ONLINE_MODEL){
+  load(file = "estimated_models/online_models/matchday35/KN_matchday35.rds")
+}else{
+  load(file = "estimated_models/models/matchday35/KN_matchday35.rds")
+}
+
 # Recall some paramters
 n_chains<-4
 n_iters<- 11000

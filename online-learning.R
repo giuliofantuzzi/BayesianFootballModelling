@@ -34,7 +34,7 @@ n_warmup<- 1000
 # In case you don't, just fit it before the cycle
 # (e-g. passing vectors of 0 means and 10 sd as default --- or using the other stan model)
 
-
+dir.create("estimated_models/online_models")
 for(i in 20:35){
   cat("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n")
   cat("...Parameters estimation after matchday n.",i,"...\n")
@@ -47,7 +47,7 @@ for(i in 20:35){
   #---------------------------------------------------------------------------
   # (2) Retrieving the previous estimates
   cat("...Retrieving previous prior information...\n")
-  load(paste0("stan/online_models/matchday",i-1,"/KN_matchday",i-1,".rds"))
+  load(paste0("estimated_models/online_models/matchday",i-1,"/KN_matchday",i-1,".rds"))
   prev_att_means= unlist(sapply(1:n_teams,function (t) mean(as.array(KN_model)[,,paste0("att[",t,"]")])))
   prev_def_means= unlist(sapply(1:n_teams,function (t) mean(as.array(KN_model)[,,paste0("def[",t,"]")])))
   prev_mu_mean= mean(as.array(KN_model)[,,"mu"])
@@ -83,8 +83,8 @@ for(i in 20:35){
                    seed = 16
   )
   # (5) Save the model
-  dir.create(paste0("stan/online_models/matchday",i))
-  save(KN_model,file=paste0("stan/online_models/matchday",i,"/KN_matchday",i,".rds"))
+  dir.create(paste0("estimated_models/online_models/matchday",i))
+  save(KN_model,file=paste0("estimated_models/online_models/matchday",i,"/KN_matchday",i,".rds"))
 }
 
 

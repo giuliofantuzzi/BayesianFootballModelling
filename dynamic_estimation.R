@@ -30,9 +30,8 @@ n_chains<-4
 n_iters<- 11000
 n_warmup<- 1000
 
-dir.create("stan/models")
-
-for(i in 19:34){
+dir.create("estimated_models/models")
+for(i in 19:35){
   cat("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n")
   cat("Parameters estimation after matchday n.",i,"...\n")
   cat("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n")
@@ -57,15 +56,15 @@ for(i in 19:34){
                    seed = 16
   )
   # (4) Save the model
-  dir.create(paste0("stan/models/matchday",i))
-  save(KN_model,file=paste0("stan/models/matchday",i,"/KN_matchday",i,".rds"))
+  dir.create(paste0("estimated_models/models/matchday",i))
+  save(KN_model,file=paste0("estimated_models/models/matchday",i,"/KN_matchday",i,".rds"))
 }
 
 #-------------------------------------------------------------------------------
 # Get all att-def parameters over matchdays
 #-------------------------------------------------------------------------------
 source("utils/get_all_teams_data.R")
-ts_df<- get_all_teams_data(teams_list=teams,start=19,end=35)
+ts_df<- get_all_teams_data(teams_list=teams,start=19,end=35,models_filepath ="estimated_models/models")
 
 #-------------------------------------------------------------------------------
 # Plot the timeseries for each team
