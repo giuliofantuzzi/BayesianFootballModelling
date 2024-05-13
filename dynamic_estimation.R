@@ -64,63 +64,13 @@ for(i in 19:34){
 #-------------------------------------------------------------------------------
 # Get all att-def parameters over matchdays
 #-------------------------------------------------------------------------------
-
-get_all_teams_data <- function(teams_list, start = 19, end = 35) {
-  all_teams_data <- data.frame(Team=character(),
-                               Matchday=integer(),
-                               Mean=double(),
-                               Sd=double(),
-                               Lower=double(),
-                               Upper=double(),
-                               Type=character())
-  for (m in start:end) {
-    load(paste0("stan/models/matchday", m, "/KN_matchday", m, ".rds"))
-    posterior <- as.array(KN_model)
-    for (t in teams_list) {
-      team_idx <- match(t, teams_list)
-      att <- posterior[, , paste0("att[", team_idx, "]")]
-      def <- posterior[, , paste0("def[", team_idx, "]")]
-      team_data <- data.frame(
-        "Team" = rep(t,2),
-        "Matchday" =rep(m,2),
-        "Mean" = c(mean(att), mean(def)),
-        "Sd" =  c(sd(att), sd(def)),
-        "Lower" = c(quantile(att,0.025), quantile(def,0.025)),
-        "Upper" = c(quantile(att,0.975), quantile(def,0.975)),
-        "Type" = c("att", "def")
-      )
-      all_teams_data <- rbind(all_teams_data, team_data)
-    }
-  }
-  return(all_teams_data)
-}
-
+source("utils/get_all_teams_data.R")
+ts_df<- get_all_teams_data(teams_list=teams,start=19,end=35)
 
 #-------------------------------------------------------------------------------
 # Plot the timeseries for each team
 #-------------------------------------------------------------------------------
-
-ts_df<- get_all_teams_data(teams_list=teams,start=19,end=35)
-
-plot_parameters_ts<- function(team,complete_df,start=19,end=35){
-  plot<- complete_df%>% filter(Team==team & Matchday >= start & Matchday <= end) %>%
-      ggplot( aes(x = Matchday, y = Mean, ymin = Lower, ymax = Upper, fill = Type))+
-        geom_line(aes(color = Type), linewidth = 1) +
-        geom_point()+
-        geom_ribbon(aes(fill = Type), alpha = 0.20) +
-        labs(title = paste0(team," abilities over time"), x = "Matchday", y = "Coefficient") +
-        scale_color_manual(values = c("blue", "red")) +  # Specify colors for attack and defence
-        scale_fill_manual(values = c("blue", "red")) +  # Hide the legend for fill
-        theme_minimal()+
-        theme(#axis.title.x = element_text(size=12, face="bold", colour = "black"),
-          #axis.text.x = element_text(size=10, face="bold", colour = "black"),
-          #axis.title.y = element_text(size=12, face="bold", colour = "black"),
-          #axis.text.y = element_text(size=10, face="bold", colour = "black"),
-          plot.title = element_text(hjust = 0.5,face = "bold")
-          )
-  return(plot)
-}
-
+source("utils/plot_parameters_ts.R")
 
 plot_list <- list()
 
