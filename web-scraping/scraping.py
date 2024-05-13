@@ -68,11 +68,11 @@ if __name__ == "__main__":
     assert len(sys.argv) <= 2, "Usage: python scraping.py <season>"
     season = sys.argv[1] if len(sys.argv) == 2 else "2324"
     # Create directory to store data
-    if not os.path.exists(f"../dataa/season_{season}"):
-        os.makedirs(f"../dataa/season_{season}")
+    if not os.path.exists(f"../data/season_{season}"):
+        os.makedirs(f"../data/season_{season}")
     # Scrape data for all leagues
     for league in LEAGUES.keys():
-        filepath = f"../dataa/season_{season}/{league}_{season}.csv" 
+        filepath = f"../data/season_{season}/{league}_{season}.csv" 
         try:
             scraper = LeagueScraper(league, season)
             scraper.download()
