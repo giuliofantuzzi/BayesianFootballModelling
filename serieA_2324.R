@@ -49,8 +49,7 @@ KN_model <- stan(file = 'stan/karlis-ntzoufras.stan',
                  warmup = n_warmup,
                  seed = 16
 )
-#save(KN_model, file = "stan/KN_serieA.Rdata")
-load(file = "stan/KN_serieA.Rdata")
+
 par_names<-  rownames(summary(KN_model)$summary)
 useful_par_names<- par_names[!(grepl("raw", par_names))]
 print(KN_model,par=useful_par_names)
