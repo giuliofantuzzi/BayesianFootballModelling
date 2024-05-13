@@ -28,16 +28,16 @@ functions {
 data {
   int<lower=1> n_teams;
   int<lower=1> n_games;
-  int<lower=1, upper=n_teams> home_team[n_games];
-  int<lower=1, upper=n_teams> away_team[n_games];
-  int goal_difference[n_games];
+  array[n_games] int<lower=1, upper=n_teams> home_team;
+  array[n_games] int<lower=1, upper=n_teams> away_team;
+  array[n_games] int goal_difference;
   // Previous estimates and sd
-  real prev_att_means[n_teams];
-  real prev_def_means[n_teams];
+  array[n_teams] real prev_att_means;
+  array[n_teams] real prev_def_means;
   real prev_mu_mean;
   real prev_home_advantage_mean;
-  real<lower=0> prev_att_sd[n_teams];
-  real<lower=0> prev_def_sd[n_teams];
+  array[n_teams] real<lower=0> prev_att_sd;
+  array[n_teams] real<lower=0> prev_def_sd;
   real<lower=0> prev_mu_sd;
   real<lower=0> prev_home_advantage_sd;
 }
@@ -46,14 +46,14 @@ parameters {
   real<lower=0, upper=1> p;
   real mu;
   real home_advantage;
-  real att_raw[n_teams - 1];
-  real def_raw[n_teams - 1];
+  array[n_teams-1] real att_raw;
+  array[n_teams-1] real def_raw;
 }
 
 transformed parameters {
   // Sum-to-zero constraint
-  vector[n_teams] att;
-  vector[n_teams] def;
+  array[n_teams] real att;
+  array[n_teams] real def;
 
   for (t in 1:(n_teams-1)) {
     att[t] = att_raw[t];
@@ -65,9 +65,8 @@ transformed parameters {
 }
 
 model {
-  vector[n_games] theta_H;
-  vector[n_games] theta_A;
-  vector[n_games] expected_goal_difference;
+  array[n_games] real theta_H;
+  array[n_games] real theta_A;
   // Priors
   p ~ uniform(0, 1);
   for(a in 1:n_teams){

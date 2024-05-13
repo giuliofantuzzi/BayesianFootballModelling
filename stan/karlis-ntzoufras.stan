@@ -1,6 +1,6 @@
 functions {
 
-  real skellam_log(int k, real lambda1, real lambda2) {
+  real skellam_lpmf(int k, real lambda1, real lambda2) {
     real total;
     real log_prob;
     total = (- lambda1 - lambda2) + (log(lambda1) - log(lambda2)) * k / 2;
@@ -8,11 +8,11 @@ functions {
     return log_prob;
   }
 
-  real zero_inflated_skellam_log(int k, real lambda1, real lambda2, real p) {
+  real zero_inflated_skellam_lpmf(int k, real lambda1, real lambda2, real p) {
     real base_prob;
     real prob;
     real log_prob;
-    base_prob = exp(skellam_log(k, lambda1, lambda2));
+    base_prob = exp(skellam_lpmf(k|lambda1, lambda2));
     if (k == 0){
       prob = p + (1 - p) * base_prob;
     }
@@ -24,27 +24,27 @@ functions {
   }
 
 }
-
+//real[] pars becomes array[] real pars
 data {
   int<lower=1> n_teams;
   int<lower=1> n_games;
-  int<lower=1, upper=n_teams> home_team[n_games];
-  int<lower=1, upper=n_teams> away_team[n_games];
-  int goal_difference[n_games];
+  array[n_games] int<lower=1, upper=n_teams> home_team;
+  array[n_games] int<lower=1, upper=n_teams> away_team;
+  array[n_games] int goal_difference;
 }
 
 parameters {
   real<lower=0, upper=1> p;
   real mu;
   real home_advantage;
-  real att_raw[n_teams - 1];
-  real def_raw[n_teams - 1];
+  array[n_teams-1] real att_raw;
+  array[n_teams-1] real def_raw;
 }
 
 transformed parameters {
   // Sum-to-zero constraint
-  vector[n_teams] att;
-  vector[n_teams] def;
+  array[n_teams] real att;
+  array[n_teams] real def;
 
   for (t in 1:(n_teams-1)) {
     att[t] = att_raw[t];
@@ -56,9 +56,8 @@ transformed parameters {
 }
 
 model {
-  vector[n_games] theta_H;
-  vector[n_games] theta_A;
-  vector[n_games] expected_goal_difference;
+  array[n_games] real theta_H;
+  array[n_games] real theta_A;
   // Priors
   p ~ uniform(0, 1);
   att ~ normal(0, 10);
