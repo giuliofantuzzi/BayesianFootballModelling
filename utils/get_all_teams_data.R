@@ -1,5 +1,10 @@
 library(rstan)
-get_all_teams_data <- function(teams_list, start = 19, end = 35) {
+get_all_teams_data <- function(teams_list, start = 19, end = 35,models_dir_path=NULL) {
+  
+  if(is.null(models_dir_path) || !file.exists(models_dir_path)){
+    stop("Error! Models directory path not provided or does not exist")
+  }
+  
   all_teams_data <- data.frame(Team=character(),
                                Matchday=integer(),
                                Mean=double(),
@@ -8,7 +13,7 @@ get_all_teams_data <- function(teams_list, start = 19, end = 35) {
                                Upper=double(),
                                Type=character())
   for (m in start:end) {
-    load(paste0("stan/models/matchday", m, "/KN_matchday", m, ".rds"))
+    load(paste0(models_filepath,"/matchday", m, "/KN_matchday", m, ".rds"))
     posterior <- as.array(KN_model)
     for (t in teams_list) {
       team_idx <- match(t, teams_list)
