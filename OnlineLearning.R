@@ -34,25 +34,52 @@ dir.create("estimated_models/online_models")
 
 # (1) Base step: fit the first model after 1st half of the league
 base_training=SerieA_2324[1:190,c("HomeTeam","AwayTeam","FTHG","FTAG")]
-games=nrow(base_training)
 stan_paramters = list(
   n_teams=n_teams,
   n_games=nrow(base_training),
   home_team= ht[1:nrow(base_training)],
   away_team= at[1:nrow(base_training)],
-  goal_difference = base_training$FTHG-base_training$FTAG
+  goal_difference = base_training$FTHG-base_training$FTAG,
+  prev_att_means=rep(0,20),
+  prev_def_means=rep(0,20),
+  prev_mu_mean=0,
+  prev_home_advantage_mean=0,
+  prev_att_sd=rep(10,20),
+  prev_def_sd=rep(10,20),
+  prev_mu_sd=10,
+  prev_home_advantage_sd=10
 )
 
-KN_model <- stan(file = 'stan/karlis-ntzoufras.stan',
+KN_model <- stan(file = 'stan/online.stan',
                  data = stan_paramters,
                  chains = n_chains,
                  iter = n_iters,
                  warmup = n_warmup,
                  seed = 16
 )
-
 dir.create("estimated_models/online_models/matchday19")
 save(KN_model,file="estimated_models/online_models/matchday15/KN_matchday19.rds")
+
+#...............................................................................
+# Note: an equivalent way would be
+# base_training=SerieA_2324[1:190,c("HomeTeam","AwayTeam","FTHG","FTAG")]
+# stan_paramters = list(
+#   n_teams=n_teams,
+#   n_games=nrow(base_training),
+#   home_team= ht[1:nrow(base_training)],
+#   away_team= at[1:nrow(base_training)],
+#   goal_difference = base_training$FTHG-base_training$FTAG
+# )
+# 
+# KN_model <- stan(file = 'stan/karlis-ntzoufras.stan',
+#                  data = stan_paramters,
+#                  chains = n_chains,
+#                  iter = n_iters,
+#                  warmup = n_warmup,
+#                  seed = 16
+# )
+#...............................................................................
+
 
 # (2) Online learning loop
 for(i in 20:35){
