@@ -1,5 +1,6 @@
 #--------------------------------------------------------------------------------
 import os
+import sys
 import requests
 #--------------------------------------------------------------------------------
 
@@ -63,10 +64,15 @@ class LeagueScraper():
             print("No CSV to save, download it first.")
 
 if __name__ == "__main__":
-    # year to scrape data
-    season = "2324"  
+    # Check if season is provided from terminal(if not, 2324 will be used as default)
+    assert len(sys.argv) <= 2, "Usage: python scraping.py <season>"
+    season = sys.argv[1] if len(sys.argv) == 2 else "2324"
+    # Create directory to store data
+    if not os.path.exists(f"../dataa/season_{season}"):
+        os.makedirs(f"../dataa/season_{season}")
+    # Scrape data for all leagues
     for league in LEAGUES.keys():
-        filepath = f"../data/season_{season}/{league}_{season}.csv" 
+        filepath = f"../dataa/season_{season}/{league}_{season}.csv" 
         try:
             scraper = LeagueScraper(league, season)
             scraper.download()
