@@ -1,6 +1,6 @@
 functions {
 
-  real skellam_log(int k, real lambda1, real lambda2) {
+  real skellam_lpmf(int k, real lambda1, real lambda2) {
     real total;
     real log_prob;
     total = (- lambda1 - lambda2) + (log(lambda1) - log(lambda2)) * k / 2;
@@ -8,11 +8,11 @@ functions {
     return log_prob;
   }
 
-  real zero_inflated_skellam_log(int k, real lambda1, real lambda2, real p) {
+  real zero_inflated_skellam_lpmf(int k, real lambda1, real lambda2, real p) {
     real base_prob;
     real prob;
     real log_prob;
-    base_prob = exp(skellam_log(k, lambda1, lambda2));
+    base_prob = exp(skellam_lpmf(k| lambda1, lambda2));
     if (k == 0){
       prob = p + (1 - p) * base_prob;
     }
