@@ -21,17 +21,20 @@ teams<- str_replace_all(teams, " ", "")
 n_teams<- length(teams)
 SerieA_2324$ht= unlist(sapply(1:nrow(SerieA_2324),function (g) which(teams==SerieA_2324$HomeTeam[g])))
 SerieA_2324$at= unlist(sapply(1:nrow(SerieA_2324),function (g) which(teams==SerieA_2324$AwayTeam[g])))
-
-# Rankings after the first half of the league
-teams_pts <- data.frame(Team=teams,Pts=rep(0,n_teams),Lower=rep(0,n_teams),Upper=rep(0,n_teams))
+n_chains=4
+n_iters=11000
+n_warmup<- 1000
+# Rankings after the first half of the league 
+# Note: this df is s.t. each column is associated to a team
+#       nrows is n_chains*(n_iters-n_warmup) to be friendly with the MCMC posteriors
+teams_pts <- data.frame(matrix(NA,nrow = n_chains*(n_iters-n_warmup),ncol=n_teams))
+colnames(teams_pts)=teams
 for (t in 1:n_teams){
   n_wins= SerieA_2324[1:190,] %>% filter(((ht==t) &(FTHG>FTAG)) | ((at==t) & (FTHG<FTAG)))%>% nrow() 
   n_draws= SerieA_2324[1:190,] %>% filter(((ht==t) | (at==t)) & (FTHG == FTAG))%>% nrow() 
-  teams_pts$Pts[t]= 3*n_wins+n_draws
+  teams_pts[,t]= 3*n_wins+n_draws
 }
-# Since in the first half we are not estimating anything, Lower=Upper=Pts
-teams_pts$Lower<- teams_pts$Pts
-teams_pts$Upper<- teams_pts$Pts
+
 
 # Iteration over the 2nd half
 for (m in 20:35){
@@ -53,9 +56,9 @@ for (m in 20:35){
   #-------------------------------------------------
   # (3) Make predictions
   cat("...Computing predictions and updating rankings...\n")
-  for(m in 1:nrow(test_set)){
-    ht=test_set$ht[m]
-    at=test_set$at[m]
+  for(mm in 1:nrow(test_set)){
+    ht=test_set$ht[mm]
+    at=test_set$at[mm]
     attH=posterior[,,paste0("att[",ht,"]")]
     defH=posterior[,,paste0("def[",ht,"]")]
     attA=posterior[,,paste0("att[",at,"]")]
@@ -64,47 +67,23 @@ for (m in 20:35){
     theta_A = exp(mu+attA+defH)
     GD<- mapply(my_rzeroinflatedskellam, 1,theta_H, theta_A,p)
     
-    # Now lower and upper are from the p.o.v of the Home team
-    GD_mean<- GD %>% mean() %>% round()
-    GD_lower<- GD %>% quantile(probs =0.025) %>% round()
-    GD_upper<- GD %>% quantile(probs =0.975)  %>% round()
-    #-------------------------------------------------
-    # (4) Update the points
-    # Mean estimate
-    if(GD_mean>0){
-      teams_pts$Pts[ht] = teams_pts$Pts[ht]+3
-    }
-    else if(GD_mean<0){
-      teams_pts$Pts[at] = teams_pts$Pts[at]+3
-    }
-    else{
-      teams_pts$Pts[ht] = teams_pts$Pts[ht]+1
-      teams_pts$Pts[at] = teams_pts$Pts[at]+1
-    }
-    # Upper/Lower estimates (think about omitting them)
-    if(GD_lower>0){
-      teams_pts$Lower[ht] = teams_pts$Lower[ht]+3
-    }
-    else if(GD_lower<0){
-      teams_pts$Upper[at] = teams_pts$Upper[at]+3
-    }
-    else{
-      teams_pts$Lower[ht] = teams_pts$Lower[ht]+1
-      teams_pts$Upper[at] = teams_pts$Lower[at]+1
-    }
-    
-    if(GD_upper<0){ 
-      teams_pts$Lower[at] = teams_pts$Lower[at]+3
-    }
-    else if(GD_upper>0){
-      teams_pts$Upper[ht] = teams_pts$Upper[ht]+3
-    }
-    else{
-      teams_pts$Upper[ht] = teams_pts$Upper[ht]+1
-      teams_pts$Lower[at] = teams_pts$Lower[at]+1
-    }
+    # (4) Calculate points according to predicted goal diffs
+    pts_ht = ifelse(GD > 0, 3, ifelse(GD < 0, 0, 1))
+    pts_at = ifelse(GD < 0, 3, ifelse(GD > 0, 0, 1))
+    # (5) Sum them to the previous points
+    teams_pts[,ht] = teams_pts[,ht]+pts_ht
+    teams_pts[,at] = teams_pts[,at]+pts_at
     #-------------------------------------------------
   }
   cat("-------------------------------------------------\n")
 }
-View(teams_pts)
+# Now teams_pts has a distribution of final points for each team
+final_table<- data.frame(Team= teams,
+                         Pts_mean=NA,
+                         Pts_lower=NA,
+                         Pts_upper=NA)
+for(t in 1:n_teams){
+  final_table$Pts_mean[t]<- teams_pts[,t] %>% mean() %>% round()
+  final_table$Pts_lower[t]<- teams_pts[,t] %>% quantile(probs = 0.025) %>% round()
+  final_table$Pts_upper[t]<- teams_pts[,t] %>% quantile(probs = 0.975) %>% round()
+}
