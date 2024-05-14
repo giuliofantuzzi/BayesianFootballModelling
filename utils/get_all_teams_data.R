@@ -13,7 +13,7 @@ get_all_teams_data <- function(teams_list, start = 19, end = 35,models_dir_path=
                                Upper=double(),
                                Type=character())
   for (m in start:end) {
-    load(paste0(models_filepath,"/matchday", m, "/KN_matchday", m, ".rds"))
+    load(paste0(models_dir_path,"/matchday", m, "/KN_matchday", m, ".rds"))
     posterior <- as.array(KN_model)
     for (t in teams_list) {
       team_idx <- match(t, teams_list)

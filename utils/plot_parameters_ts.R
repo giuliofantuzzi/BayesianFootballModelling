@@ -3,7 +3,7 @@ library(patchwork)
 library(dplyr)
 library(tidyverse)
 
-plot_parameters_ts<- function(team,complete_df,start=19,end=35){
+plot_parameters_ts<- function(team,complete_df,start=19,end=36){
   plot<- complete_df%>% filter(Team==team & Matchday >= start & Matchday <= end) %>%
     ggplot( aes(x = Matchday, y = Mean, ymin = Lower, ymax = Upper, fill = Type))+
     geom_line(aes(color = Type), linewidth = 1) +

@@ -82,7 +82,7 @@ save(KN_model,file="estimated_models/online_models/matchday15/KN_matchday19.rds"
 
 
 # (2) Online learning loop
-for(i in 20:35){
+for(i in 20:36){
   cat("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n")
   cat("...Parameters estimation after matchday n.",i,"...\n")
   cat("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n")

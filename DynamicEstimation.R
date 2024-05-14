@@ -31,7 +31,7 @@ n_iters<- 11000
 n_warmup<- 1000
 
 dir.create("estimated_models/models")
-for(i in 19:35){
+for(i in 19:36){
   cat("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n")
   cat("Parameters estimation after matchday n.",i,"...\n")
   cat("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n")
@@ -64,7 +64,7 @@ for(i in 19:35){
 # Get all att-def parameters over matchdays
 #-------------------------------------------------------------------------------
 source("utils/get_all_teams_data.R")
-ts_df<- get_all_teams_data(teams_list=teams,start=19,end=35,models_filepath ="estimated_models/models")
+ts_df<- get_all_teams_data(teams_list=teams,start=19,end=36,models_dir_path ="estimated_models/models")
 
 #-------------------------------------------------------------------------------
 # Plot the timeseries for each team
@@ -74,7 +74,7 @@ source("utils/plot_parameters_ts.R")
 plot_list <- list()
 
 plot_list <- lapply(teams, function(t) {
-  plot_parameters_ts(team = t,complete_df = ts_df,start = 19,end = 35)
+  plot_parameters_ts(team = t,complete_df = ts_df,start = 19,end = 36)
   }
 )
 

@@ -153,7 +153,7 @@ ggplot(scatterplot_df,aes(Att, Def)) +
   geom_image(aes(image = Logo), size = 0.08) + 
   xlab("Attack strength") + 
   ylab("Defense strength") + 
-  ggtitle("Teams's attack and defense abilities (Serie A 2023-2024)")+
+  ggtitle("Teams's attack and defense abilities after matchday 36 (Serie A 2023-2024)")+
   theme_linedraw()+
   theme(axis.title.x = element_text(size=12, face="bold", colour = "black"),
         axis.text.x = element_text(size=10, face="bold", colour = "black"),
