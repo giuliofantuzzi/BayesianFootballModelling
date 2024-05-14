@@ -12,6 +12,8 @@
 # Libraries and utils
 library(tidyverse)
 library(dplyr)
+library(ggplot2)
+library(bayesplot)
 source("utils/my_skellam.R")
 # Import and prepare data
 SerieA_2324<- read.csv(file="data/season_2324/SerieA_2324.csv")
@@ -87,3 +89,18 @@ for(t in 1:n_teams){
   final_table$Pts_lower[t]<- teams_pts[,t] %>% quantile(probs = 0.025) %>% round()
   final_table$Pts_upper[t]<- teams_pts[,t] %>% quantile(probs = 0.975) %>% round()
 }
+
+# To view directly the dataframe
+View(final_table)
+# Plot of the points distribution for each team
+color_scheme_set("brightblue")
+mcmc_intervals(teams_pts)+
+  labs(title="Ranking points at the end of the season",
+       x = "Points",
+       y= "Teams")+
+  theme(plot.title = element_text(hjust = 0.5,face = "bold",size=18),
+        axis.title.x = element_text(size=12, face="bold", colour = "black"),
+        axis.text.x = element_text(size=10, face="plain", colour = "black"),
+        axis.title.y = element_text(size=12, face="bold", colour = "black"),
+        axis.text.y = element_text(size=10, face="plain", colour = "black"),
+  )
