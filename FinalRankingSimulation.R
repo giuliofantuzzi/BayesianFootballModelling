@@ -39,7 +39,7 @@ for (t in 1:n_teams){
 
 
 # Iteration over the 2nd half
-for (m in 20:35){
+for (m in 20:36){
   cat(paste0("...Simulation of matchday n. ",m,"...\n"))
   #-------------------------------------------------
   # (1) Get the current matchday to predict
@@ -94,6 +94,17 @@ for(t in 1:n_teams){
 View(final_table)
 # Plot of the points distribution for each team
 color_scheme_set("brightblue")
+
+#-------------------------------------------------
+# Lazy passages to re-order columns basing on their mean
+team_means <- teams_pts %>%
+  summarise_all(mean) %>%
+  gather() %>%
+  arrange(desc(value)) %>%
+  pull(key)
+# Reorder columns based on mean points
+teams_pts <- teams_pts[, team_means]
+#-------------------------------------------------
 mcmc_intervals(teams_pts)+
   labs(title="Ranking points at the end of the season",
        x = "Points",
