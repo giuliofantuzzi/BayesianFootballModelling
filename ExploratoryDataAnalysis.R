@@ -1,0 +1,89 @@
+library(ggplot2)
+library(dplyr)
+library(tidyverse)
+#-------------------------------------------------------------------------------
+# Data loading and preparation
+#-------------------------------------------------------------------------------
+SerieA_2324<- read.csv(file="data/season_2324/SerieA_2324.csv")
+SerieA_2324<- SerieA_2324 %>% select(c("HomeTeam","AwayTeam","FTHG","FTAG"))
+SerieA_2324<- SerieA_2324 %>% mutate(GD=FTHG-FTAG)
+SerieA_2324<- SerieA_2324 %>% mutate(FinalResult=ifelse(GD>0,"HomeWin",ifelse(GD<0,"AwayWin","Draw")))
+
+
+
+#-------------------------------------------------------------------------------
+# Barplot of Home-Draw-Away
+SerieA_2324 %>%
+  count(FinalResult) %>%
+  ggplot(aes(x = reorder(FinalResult, -n), y = n, fill = FinalResult)) + 
+  geom_bar(stat = "identity",col="black") +
+  theme_minimal() + 
+  labs(x = "", y = "Freq", title = "Type of Victory",fill = "Match Outcome") +
+  scale_fill_manual(values = c("HomeWin" = "#2A6426",
+                               "AwayWin" = "#B0F1AC",
+                               "Draw" = "#4FB448"))
+#-------------------------------------------------------------------------------
+
+
+#-------------------------------------------------------------------------------
+# Assign points to each match outcome
+SerieA_2324 <- SerieA_2324 %>%
+  mutate(HomePoints = ifelse(FinalResult == "HomeWin", 3, ifelse(FinalResult == "Draw", 1, 0)),
+         AwayPoints = ifelse(FinalResult == "AwayWin", 3, ifelse(FinalResult == "Draw", 1, 0)))
+
+# Aggregate points for each team
+total_points <- SerieA_2324 %>%
+  group_by(Team = HomeTeam) %>%
+  summarise(TotalPoints = sum(HomePoints)) %>%
+  bind_rows(
+    SerieA_2324 %>%
+      group_by(Team = AwayTeam) %>%
+      summarise(TotalPoints = sum(AwayPoints))
+  ) %>%
+  group_by(Team) %>%
+  summarise(TotalPoints = sum(TotalPoints)) %>%
+  arrange(desc(TotalPoints))
+#-------------------------------------------------------------------------------
+
+
+#-------------------------------------------------------------------------------
+home_scored <- aggregate(SerieA_2324$FTHG, list(SerieA_2324$HomeTeam), FUN = sum) 
+away_scored <- aggregate(SerieA_2324$FTAG, list(SerieA_2324$AwayTeam), FUN = sum)
+home_conceeded <- aggregate(SerieA_2324$FTAG, list(SerieA_2324$HomeTeam), FUN = sum) 
+away_conceeded <- aggregate(SerieA_2324$FTHG, list(SerieA_2324$AwayTeam), FUN = sum)
+
+colnames(home_scored) <- c("team", "home_scored")
+colnames(away_scored) <- c("team", "away_scored")
+colnames(home_conceeded) <- c("team", "home_conceeded")
+colnames(away_conceeded) <- c("team", "away_conceeded")
+
+goals_scored <- merge(home_scored, away_scored, by = "team")
+goals_scored$tot_goals <- goals_scored$home_scored + goals_scored$away_scored
+
+goals_conceeded <- merge(home_conceeded, away_conceeded, by = "team")
+goals_conceeded$tot_goals <- goals_conceeded$home_conceeded + goals_conceeded$away_conceeded
+
+
+goals_scored %>%
+  mutate(team = fct_reorder(team, tot_goals))  %>%
+  ggplot(aes(x = team, y = tot_goals)) +
+  geom_bar(stat = "identity", col="black",fill = "green4", alpha = 0.6, width = 0.8) +
+  geom_text(aes(label = tot_goals),hjust=-0.3,size = 4,color = "black") +
+  coord_flip() +
+  theme_minimal() +
+  labs(x="Team",y = 'Number of Goals', title = 'Number of goals scored by team')
+
+goals_conceeded %>%
+  mutate(team = fct_reorder(team, tot_goals))  %>%
+  ggplot(aes(x = team, y = tot_goals)) +
+  geom_bar(stat = "identity", col="black",fill = "red4", alpha = 0.6, width = 0.8) +
+  geom_text(aes(label = tot_goals),hjust=-0.3,size = 4,color = "black") +
+  coord_flip() +
+  theme_minimal() +
+  labs(x="Team",y = 'Number of Goals', title = 'Number of goals conceeded by team')
+#-------------------------------------------------------------------------------
+
+
+
+
+
