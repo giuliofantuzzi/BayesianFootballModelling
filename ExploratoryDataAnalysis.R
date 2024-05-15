@@ -15,15 +15,20 @@ SerieA_2324<- SerieA_2324 %>% mutate(FinalResult=ifelse(GD>0,"HomeWin",ifelse(GD
 # Barplot of Home-Draw-Away
 SerieA_2324 %>%
   count(FinalResult) %>%
-  ggplot(aes(x = reorder(FinalResult, -n), y = n, fill = FinalResult)) + 
+  ggplot(aes(x = reorder(FinalResult, -n), y = n/nrow(SerieA_2324), fill = FinalResult)) + 
   geom_bar(stat = "identity",col="black") +
   theme_minimal() + 
-  labs(x = "", y = "Freq", title = "Type of Victory",fill = "Match Outcome") +
+  labs(x = "", y = "Frequency", title = "Type of Victory",fill = "Match Outcome") +
   scale_fill_manual(values = c("HomeWin" = "#2A6426",
                                "AwayWin" = "#B0F1AC",
-                               "Draw" = "#4FB448"))
+                               "Draw" = "#4FB448"))+
+  theme(axis.text.x = element_text(size=10, face="bold", colour = "black"),
+        axis.title.y = element_text(size=12, face="bold", colour = "black"),
+        axis.text.y = element_text(size=10, face="plain", colour = "black"),
+        plot.title = element_text(hjust = 0.5,face = "bold"),
+        legend.title = element_text(face="bold")
+  )
 #-------------------------------------------------------------------------------
-
 
 #-------------------------------------------------------------------------------
 # Assign points to each match outcome
@@ -43,6 +48,7 @@ total_points <- SerieA_2324 %>%
   group_by(Team) %>%
   summarise(TotalPoints = sum(TotalPoints)) %>%
   arrange(desc(TotalPoints))
+View(total_points)
 #-------------------------------------------------------------------------------
 
 
@@ -71,19 +77,26 @@ goals_scored %>%
   geom_text(aes(label = tot_goals),hjust=-0.3,size = 4,color = "black") +
   coord_flip() +
   theme_minimal() +
-  labs(x="Team",y = 'Number of Goals', title = 'Number of goals scored by team')
+  labs(x="Team",y = 'Number of Goals', title = 'Number of goals scored by team')+
+  theme(axis.text.x = element_text(size=10, face="plain", colour = "black"),
+        axis.title.x = element_text(size=12, face="bold", colour = "black"),
+        axis.title.y = element_text(size=12, face="bold", colour = "black"),
+        axis.text.y = element_text(size=10, face="plain", colour = "black"),
+        plot.title = element_text(hjust = 0.5,face = "bold")
+  )
 
 goals_conceeded %>%
   mutate(team = fct_reorder(team, tot_goals))  %>%
   ggplot(aes(x = team, y = tot_goals)) +
-  geom_bar(stat = "identity", col="black",fill = "red4", alpha = 0.6, width = 0.8) +
+  geom_bar(stat = "identity", col="black",fill = "red3", alpha = 0.6, width = 0.8) +
   geom_text(aes(label = tot_goals),hjust=-0.3,size = 4,color = "black") +
   coord_flip() +
   theme_minimal() +
-  labs(x="Team",y = 'Number of Goals', title = 'Number of goals conceeded by team')
+  labs(x="Team",y = 'Number of Goals', title = 'Number of goals conceeded by team')+
+  theme(axis.text.x = element_text(size=10, face="plain", colour = "black"),
+        axis.title.x = element_text(size=12, face="bold", colour = "black"),
+        axis.title.y = element_text(size=12, face="bold", colour = "black"),
+        axis.text.y = element_text(size=10, face="plain", colour = "black"),
+        plot.title = element_text(hjust = 0.5,face = "bold")
+  )
 #-------------------------------------------------------------------------------
-
-
-
-
-
