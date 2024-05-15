@@ -94,11 +94,11 @@ for(t in 1:n_teams){
 View(final_table)
 # Plot of the points distribution for each team
 color_scheme_set("brightblue")
-
 #-------------------------------------------------
 # Lazy passages to re-order columns basing on their mean
 team_means <- teams_pts %>%
   summarise_all(mean) %>%
+  round() %>%
   gather() %>%
   arrange(desc(value)) %>%
   pull(key)
