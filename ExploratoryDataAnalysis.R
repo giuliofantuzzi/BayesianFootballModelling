@@ -53,6 +53,7 @@ View(total_points)
 
 
 #-------------------------------------------------------------------------------
+# Total Goals scored and conceeded by team
 home_scored <- aggregate(SerieA_2324$FTHG, list(SerieA_2324$HomeTeam), FUN = sum) 
 away_scored <- aggregate(SerieA_2324$FTAG, list(SerieA_2324$AwayTeam), FUN = sum)
 home_conceeded <- aggregate(SerieA_2324$FTAG, list(SerieA_2324$HomeTeam), FUN = sum) 
@@ -93,6 +94,53 @@ goals_conceeded %>%
   coord_flip() +
   theme_minimal() +
   labs(x="Team",y = 'Number of Goals', title = 'Number of goals conceeded by team')+
+  theme(axis.text.x = element_text(size=10, face="plain", colour = "black"),
+        axis.title.x = element_text(size=12, face="bold", colour = "black"),
+        axis.title.y = element_text(size=12, face="bold", colour = "black"),
+        axis.text.y = element_text(size=10, face="plain", colour = "black"),
+        plot.title = element_text(hjust = 0.5,face = "bold")
+  )
+#-------------------------------------------------------------------------------
+
+
+#-------------------------------------------------------------------------------
+# Goals scored and conceeded by team Home vs Away
+goals_scored %>% 
+  select(c(team,home_scored,away_scored)) %>%
+  pivot_longer(cols = c(home_scored, away_scored), 
+               names_to = "Stadium", 
+               values_to = "Score") %>%
+  ggplot(aes(x = team, y = Score, fill = Stadium)) +
+    geom_bar(stat = "identity", position = "dodge",width = 0.5,col="black") +
+  scale_fill_manual(values = c("home_scored" = "#145A32", "away_scored" = "#52BE80"),
+                    labels = c("home_scored" = "Home Scored", "away_scored" = "Away Scored"))+
+    coord_flip()+
+    labs(title = "Goals scored by team (Home vs Away)", 
+         x = "Team", 
+         y = "Score")+
+    theme_minimal()+
+    theme(axis.text.x = element_text(size=10, face="plain", colour = "black"),
+          axis.title.x = element_text(size=12, face="bold", colour = "black"),
+          axis.title.y = element_text(size=12, face="bold", colour = "black"),
+          axis.text.y = element_text(size=10, face="plain", colour = "black"),
+          plot.title = element_text(hjust = 0.5,face = "bold")
+    )
+
+# Goals conceeded Home vs Away
+goals_conceeded %>% 
+  select(c(team,home_conceeded,away_conceeded)) %>%
+  pivot_longer(cols = c(home_conceeded, away_conceeded), 
+               names_to = "Stadium", 
+               values_to = "Score") %>%
+  ggplot(aes(x = team, y = Score, fill = Stadium)) +
+  geom_bar(stat = "identity", position = "dodge",width = 0.5,col="black") +
+  scale_fill_manual(values = c("home_conceeded" = "#641E16", "away_conceeded" = "#EC7063"),
+                    labels = c("home_conceeded" = "Home Conceded", "away_conceeded" = "Away Conceded"))+
+  coord_flip()+
+  labs(title = "Goals conceeded by team (Home vs Away)", 
+       x = "Team", 
+       y = "Score")+
+  theme_minimal()+
   theme(axis.text.x = element_text(size=10, face="plain", colour = "black"),
         axis.title.x = element_text(size=12, face="bold", colour = "black"),
         axis.title.y = element_text(size=12, face="bold", colour = "black"),
