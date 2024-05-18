@@ -60,8 +60,8 @@ model {
   array[n_games] real theta_A;
   // Priors
   p ~ uniform(0, 1);
-  att ~ normal(0, 10);
-  def ~ normal(0, 10);
+  att_raw ~ normal(0, 10);
+  def_raw ~ normal(0, 10);
   home_advantage ~ normal(0, 10);
   mu ~ normal(0, 10);
   // Likelihood

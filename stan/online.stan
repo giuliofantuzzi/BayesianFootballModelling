@@ -69,9 +69,9 @@ model {
   array[n_games] real theta_A;
   // Priors
   p ~ uniform(0, 1);
-  for(a in 1:n_teams){
-    att[a] ~ normal(prev_att_means[a], prev_att_sd[a]);
-    def[a] ~ normal(prev_def_means[a], prev_def_sd[a]);
+  for(a in 1:(n_teams-1)){
+    att_raw[a] ~ normal(prev_att_means[a], prev_att_sd[a]);
+    def_raw[a] ~ normal(prev_def_means[a], prev_def_sd[a]);
   }
   home_advantage ~ normal(prev_home_advantage_mean, prev_home_advantage_sd);
   mu ~ normal(prev_mu_mean, prev_mu_sd);
