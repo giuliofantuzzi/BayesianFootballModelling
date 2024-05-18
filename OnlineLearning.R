@@ -58,7 +58,7 @@ KN_model <- stan(file = 'stan/online.stan',
                  seed = 16
 )
 dir.create("estimated_models/online_models/matchday19")
-save(KN_model,file="estimated_models/online_models/matchday15/KN_matchday19.rds")
+save(KN_model,file="estimated_models/online_models/matchday19/KN_matchday19.rds")
 
 #...............................................................................
 # Note: an equivalent way would be
@@ -95,12 +95,12 @@ for(i in 20:36){
   # (2) Retrieving the previous estimates
   cat("...Retrieving previous prior information...\n")
   load(paste0("estimated_models/online_models/matchday",i-1,"/KN_matchday",i-1,".rds"))
-  prev_att_means= unlist(sapply(1:n_teams,function (t) mean(as.array(KN_model)[,,paste0("att[",t,"]")])))
-  prev_def_means= unlist(sapply(1:n_teams,function (t) mean(as.array(KN_model)[,,paste0("def[",t,"]")])))
+  prev_att_means= unlist(sapply(1:n_teams,function (t) mean(as.array(KN_model)[,,paste0("att[",t,"]")]))) #qui da mettere n_teams-1
+  prev_def_means= unlist(sapply(1:n_teams,function (t) mean(as.array(KN_model)[,,paste0("def[",t,"]")]))) #qui da mettere n_teams-1
   prev_mu_mean= mean(as.array(KN_model)[,,"mu"])
   prev_home_advantage_mean= mean(as.array(KN_model)[,,"home_advantage"])
-  prev_att_sd= unlist(sapply(1:n_teams,function (t) sd(as.array(KN_model)[,,paste0("att[",t,"]")])))
-  prev_def_sd= unlist(sapply(1:n_teams,function (t) sd(as.array(KN_model)[,,paste0("def[",t,"]")])))
+  prev_att_sd= unlist(sapply(1:n_teams,function (t) sd(as.array(KN_model)[,,paste0("att[",t,"]")]))) #qui da mettere n_teams-1
+  prev_def_sd= unlist(sapply(1:n_teams,function (t) sd(as.array(KN_model)[,,paste0("def[",t,"]")]))) #qui da mettere n_teams-1
   prev_mu_sd= sd(as.array(KN_model)[,,"mu"])
   prev_home_advantage_sd= sd(as.array(KN_model)[,,"home_advantage"])
   #---------------------------------------------------------------------------

@@ -7,7 +7,7 @@ library(rstan)
 library(ggplot2)
 library(patchwork)
 options(mc.cores = parallel::detectCores())
-rstan_options(auto_write = TRUE)
+#rstan_options(auto_write = TRUE)
 rstan_options(threads_per_chain = 2)
 
 #-------------------------------------------------------------------------------
