@@ -1,3 +1,4 @@
+rm(list = ls())
 #-------------------------------------------------------------------------------
 # Libraries and utils
 #-------------------------------------------------------------------------------
@@ -6,34 +7,41 @@ library(tidyverse)
 library(rstan)
 library(ggplot2)
 library(patchwork)
-options(mc.cores = parallel::detectCores())
-rstan_options(auto_write = TRUE)
-rstan_options(threads_per_chain = 2)
 
+#-------------------------------------------------------------------------------
+# Global settings and variables
+#-------------------------------------------------------------------------------
+options(mc.cores = parallel::detectCores())
+#rstan_options(auto_write = TRUE)
+rstan_options(threads_per_chain = 2)
+N_CHAINS=4
+N_ITERS=11000
+N_WARMUP=1000
+DATA_DIR= "data/"
+STAN_DIR= "stan/"
+SEASON="2122"
+MODELS_DIR= paste0("estimated_models/season_",SEASON,"/online_models/")
 #-------------------------------------------------------------------------------
 # Data import and preparation
 #-------------------------------------------------------------------------------
-SerieA_2324<- read.csv(file="data/season_2324/SerieA_2324.csv")
-SerieA_2324<- SerieA_2324[,c("HomeTeam","AwayTeam","FTHG","FTAG")]
-n_games<- nrow(SerieA_2324)
-teams<- unique(SerieA_2324$HomeTeam)
-ht= unlist(sapply(1:n_games,function (g) which(teams==SerieA_2324$HomeTeam[g])))
-at= unlist(sapply(1:n_games,function (g) which(teams==SerieA_2324$AwayTeam[g])))
-teams<- str_replace_all(teams, " ", "")
+SerieA_data<- read.csv(file= paste0(DATA_DIR,"season_",SEASON,"/SerieA_",SEASON,".csv"))
+SerieA_data<- SerieA_data[,c("HomeTeam","AwayTeam","FTHG","FTAG")]
+teams<- unique(SerieA_data$HomeTeam)
+n_games<- nrow(SerieA_data)
 n_teams<- length(teams)
-
-
+n_matchdays= ceiling(n_games/((n_teams)/2))
+ht= unlist(sapply(1:n_games,function (g) which(teams==SerieA_data$HomeTeam[g])))
+at= unlist(sapply(1:n_games,function (g) which(teams==SerieA_data$AwayTeam[g])))
+teams<- str_replace_all(teams, " ", "")
 #-------------------------------------------------------------------------------
 # Estimation of the models over time (but with an online approach)
 #-------------------------------------------------------------------------------
-n_chains<-4
-n_iters<- 11000
-n_warmup<- 1000
-
-dir.create("estimated_models/online_models")
-
+# Create the folder to store models
+if(!file.exists(MODELS_DIR)){
+  dir.create(MODELS_DIR,recursive = T)
+}
 # (1) Base step: fit the first model after 1st half of the league
-base_training=SerieA_2324[1:190,c("HomeTeam","AwayTeam","FTHG","FTAG")]
+base_training=SerieA_data[1:190,c("HomeTeam","AwayTeam","FTHG","FTAG")]
 stan_paramters = list(
   n_teams=n_teams,
   n_games=nrow(base_training),
@@ -50,19 +58,19 @@ stan_paramters = list(
   prev_home_advantage_sd=10
 )
 
-KN_model <- stan(file = 'stan/online.stan',
+KN_model <- stan(file = paste0(STAN_DIR,"online.stan"),
                  data = stan_paramters,
-                 chains = n_chains,
-                 iter = n_iters,
-                 warmup = n_warmup,
+                 chains = N_CHAINS,
+                 iter = N_ITERS,
+                 warmup = N_WARMUP,
                  seed = 16
 )
-dir.create("estimated_models/online_models/matchday19")
-save(KN_model,file="estimated_models/online_models/matchday19/KN_matchday19.rds")
+dir.create(paste0(MODELS_DIR,"matchday19/"))
+save(KN_model,file=paste0(MODELS_DIR,"matchday19/KN_matchday19.rds"))
 
 #...............................................................................
-# Note: an equivalent way would be
-# base_training=SerieA_2324[1:190,c("HomeTeam","AwayTeam","FTHG","FTAG")]
+# Note: a totally equivalent way would be
+# base_training=SerieA_data[1:190,c("HomeTeam","AwayTeam","FTHG","FTAG")]
 # stan_paramters = list(
 #   n_teams=n_teams,
 #   n_games=nrow(base_training),
@@ -71,30 +79,30 @@ save(KN_model,file="estimated_models/online_models/matchday19/KN_matchday19.rds"
 #   goal_difference = base_training$FTHG-base_training$FTAG
 # )
 # 
-# KN_model <- stan(file = 'stan/karlis-ntzoufras.stan',
+# KN_model <- stan(file = paste0(STAN_DIR,"karlis-ntzoufras.stan"),
 #                  data = stan_paramters,
-#                  chains = n_chains,
-#                  iter = n_iters,
-#                  warmup = n_warmup,
+#                  chains = N_CHAINS,
+#                  iter = N_ITERS,
+#                  warmup = N_WARMUP,
 #                  seed = 16
 # )
 #...............................................................................
 
 
 # (2) Online learning loop
-for(i in 20:36){
+for(i in 20:n_matchdays){
   cat("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n")
   cat("...Parameters estimation after matchday n.",i,"...\n")
   cat("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n")
   #---------------------------------------------------------------------------
   # (1) Training and test set for the current matchday
   cat("...Preparing the training set...\n")
-  training<- SerieA_2324[1:(10*i),c("HomeTeam","AwayTeam","FTHG","FTAG")]
+  training<- SerieA_data[1:(10*i),c("HomeTeam","AwayTeam","FTHG","FTAG")]
   training<- na.omit(training) #just to manage if some matches were postponed...
   #---------------------------------------------------------------------------
   # (2) Retrieving the previous estimates
   cat("...Retrieving previous prior information...\n")
-  load(paste0("estimated_models/online_models/matchday",i-1,"/KN_matchday",i-1,".rds"))
+  load(paste0(MODELS_DIR,"/matchday",i-1,"/KN_matchday",i-1,".rds"))
   prev_att_means= unlist(sapply(1:n_teams,function (t) mean(as.array(KN_model)[,,paste0("att[",t,"]")]))) #qui da mettere n_teams-1
   prev_def_means= unlist(sapply(1:n_teams,function (t) mean(as.array(KN_model)[,,paste0("def[",t,"]")]))) #qui da mettere n_teams-1
   prev_mu_mean= mean(as.array(KN_model)[,,"mu"])
@@ -122,14 +130,14 @@ for(i in 20:36){
     )
   # (4) Fit the model
   cat("...Fitting the model...\n")
-  KN_model <- stan(file = 'stan/online.stan',
+  KN_model <- stan(file = paste0(STAN_DIR,"online.stan"),
                    data = stan_paramters,
-                   chains = n_chains,
-                   iter = n_iters,
-                   warmup = n_warmup,
+                   chains = N_CHAINS,
+                   iter = N_ITERS,
+                   warmup = N_WARMUP,
                    seed = 16
   )
   # (5) Save the model
-  dir.create(paste0("estimated_models/online_models/matchday",i))
-  save(KN_model,file=paste0("estimated_models/online_models/matchday",i,"/KN_matchday",i,".rds"))
+  dir.create(paste0(MODELS_DIR,"matchday",i,"/"))
+  save(KN_model,file=paste0(MODELS_DIR,"matchday",i,"/KN_matchday",i,".rds"))
 }

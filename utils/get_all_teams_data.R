@@ -1,4 +1,3 @@
-library(rstan)
 get_all_teams_data <- function(teams_list, start = 19, end = 35,models_dir_path=NULL) {
   
   if(is.null(models_dir_path) || !file.exists(models_dir_path)){
@@ -26,7 +25,7 @@ get_all_teams_data <- function(teams_list, start = 19, end = 35,models_dir_path=
         "Sd" =  c(sd(att), sd(def)),
         "Lower" = c(quantile(att,0.025), quantile(def,0.025)),
         "Upper" = c(quantile(att,0.975), quantile(def,0.975)),
-        "Type" = c("att", "def")
+        "Type" = c("Att_Strength", "Def_Weakness")
       )
       all_teams_data <- rbind(all_teams_data, team_data)
     }

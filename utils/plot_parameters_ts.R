@@ -3,7 +3,7 @@ library(patchwork)
 library(dplyr)
 library(tidyverse)
 
-plot_parameters_ts<- function(team,complete_df,start=19,end=36){
+plot_parameters_ts<- function(team,complete_df,start=19,end=38){
   plot<- complete_df%>% filter(Team==team & Matchday >= start & Matchday <= end) %>%
     ggplot( aes(x = Matchday, y = Mean, ymin = Lower, ymax = Upper, fill = Type))+
     geom_line(aes(color = Type), linewidth = 1) +
@@ -11,7 +11,7 @@ plot_parameters_ts<- function(team,complete_df,start=19,end=36){
     geom_ribbon(aes(fill = Type), alpha = 0.20) +
     labs(title = paste0(team," abilities over time"), x = "Matchday", y = "Coefficient") +
     scale_color_manual(values = c("blue", "red")) +  # Specify colors for attack and defence
-    scale_fill_manual(values = c("blue", "red")) +  # Hide the legend for fill
+    scale_fill_manual(values = c("blue","red")) +  # Hide the legend for fill
     theme_minimal()+
     theme(#axis.title.x = element_text(size=12, face="bold", colour = "black"),
       #axis.text.x = element_text(size=10, face="bold", colour = "black"),

@@ -1,3 +1,4 @@
+rm(list = ls())
 #-------------------------------------------------------------------------------
 # Libraries and utils
 #-------------------------------------------------------------------------------
@@ -5,22 +6,30 @@ library(ggplot2)
 library(ggrepel)
 library(dplyr)
 library(tidyverse)
-library(rstan)
 library(bayesplot)
-# In stan there wasn't a skellam_rng and the R base rskellam are "wrong"
 source("utils/my_skellam.R")
-# Decide if learn the online model or not
-ONLINE_MODEL = TRUE
-MATCHDAY_N   = 37
+#-------------------------------------------------------------------------------
+# Global settings and variables
+#-------------------------------------------------------------------------------
+N_CHAINS=4
+N_ITERS=11000
+N_WARMUP=1000
+DATA_DIR= "data/"
+STAN_DIR= "stan/"
+SEASON="2122"
+MODELS_DIR= paste0("estimated_models/season_",SEASON,"/online_models/")
+MATCHDAY_TO_PREDICT=38
 #-------------------------------------------------------------------------------
 # Prepare the test-set (the unknown matchday 36)
 #-------------------------------------------------------------------------------
-SerieA_2324<- read.csv(file="data/season_2324/SerieA_2324.csv")
-teams<- unique(SerieA_2324$HomeTeam)
+SerieA_data<- read.csv(file= paste0(DATA_DIR,"season_",SEASON,"/SerieA_",SEASON,".csv"))
+teams<- unique(SerieA_data$HomeTeam)
 teams<- str_replace_all(teams, " ", "")
 n_teams<- length(teams)
-test_set<- data.frame(HomeTeam=c("Fiorentina","Lecce","Torino","Sassuolo","Udinese","Monza","Inter","Roma","Salernitana","Bologna"),
-                      AwayTeam=c("Napoli","Atalanta","Milan","Cagliari","Empoli","Frosinone","Lazio","Genoa","Verona","Juventus")
+test_set<- data.frame(HomeTeam=c("Torino","Genoa","Atalanta","Fiorentina","Lazio",
+                                 "Spezia","Inter","Sassuolo","Salernitana","Venezia"),
+                      AwayTeam=c("Roma","Bologna","Empoli","Juventus","Verona",
+                                 "Napoli","Sampdoria","Milan","Udinese","Cagliari")
                       )
 
 
@@ -30,24 +39,16 @@ at= unlist(sapply(1:nrow(test_set),function (g) which(teams==test_set$AwayTeam[g
 #-------------------------------------------------------------------------------
 # Load the fitted stan model and make predictions
 #-------------------------------------------------------------------------------
-# Load the model trained up to matchday 35
-if(ONLINE_MODEL){
-  load(file = paste0("estimated_models/online_models/matchday",MATCHDAY_N-1,"/KN_matchday",MATCHDAY_N-1,".rds"))
-}else{
-  load(file = paste0("estimated_models/models/matchday",MATCHDAY_N-1,"/KN_matchday",MATCHDAY_N-1,".rds"))
-}
 
-# Recall some paramters
-n_chains<-4
-n_iters<- 11000
-n_warmup<- 1000
+# Load the model trained up to the prev matchday
+load(file = paste0(MODELS_DIR,"matchday",MATCHDAY_TO_PREDICT-1,"/KN_matchday",MATCHDAY_TO_PREDICT-1,".rds"))
 
 posterior<- as.array(KN_model)
 mu = posterior[,,"mu"]
 home=posterior[,,"home_advantage"]
 p = posterior[,,"p"]
 
-GD_df<- data.frame(matrix(NA,nrow = n_chains*(n_iters-n_warmup),ncol=nrow(test_set)))
+GD_df<- data.frame(matrix(NA,nrow = N_CHAINS*(N_ITERS-N_WARMUP),ncol=nrow(test_set)))
 
 for(m in 1:nrow(test_set)){
   attH=posterior[,,paste0("att[",ht[m],"]")]
