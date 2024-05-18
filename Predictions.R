@@ -10,8 +10,8 @@ library(bayesplot)
 # In stan there wasn't a skellam_rng and the R base rskellam are "wrong"
 source("utils/my_skellam.R")
 # Decide if learn the online model or not
-ONLINE_MODEL= TRUE
-
+ONLINE_MODEL = TRUE
+MATCHDAY_N   = 37
 #-------------------------------------------------------------------------------
 # Prepare the test-set (the unknown matchday 36)
 #-------------------------------------------------------------------------------
@@ -19,8 +19,8 @@ SerieA_2324<- read.csv(file="data/season_2324/SerieA_2324.csv")
 teams<- unique(SerieA_2324$HomeTeam)
 teams<- str_replace_all(teams, " ", "")
 n_teams<- length(teams)
-test_set<- data.frame(HomeTeam=c("Frosinone","Napoli","Milan","Lazio","Genoa","Verona","Juventus","Atalanta","Lecce","Fiorentina"),
-                      AwayTeam=c("Inter","Bologna","Cagliari","Empoli","Sassuolo","Torino","Salernitana","Roma","Udinese","Monza")
+test_set<- data.frame(HomeTeam=c("Fiorentina","Lecce","Torino","Sassuolo","Udinese","Monza","Inter","Roma","Salernitana","Bologna"),
+                      AwayTeam=c("Napoli","Atalanta","Milan","Cagliari","Empoli","Frosinone","Lazio","Genoa","Verona","Juventus")
                       )
 
 
@@ -32,9 +32,9 @@ at= unlist(sapply(1:nrow(test_set),function (g) which(teams==test_set$AwayTeam[g
 #-------------------------------------------------------------------------------
 # Load the model trained up to matchday 35
 if(ONLINE_MODEL){
-  load(file = "estimated_models/online_models/matchday35/KN_matchday35.rds")
+  load(file = paste0("estimated_models/online_models/matchday",MATCHDAY_N-1,"/KN_matchday",MATCHDAY_N-1,".rds"))
 }else{
-  load(file = "estimated_models/models/matchday35/KN_matchday35.rds")
+  load(file = paste0("estimated_models/models/matchday",MATCHDAY_N-1,"/KN_matchday",MATCHDAY_N-1,".rds"))
 }
 
 # Recall some paramters
