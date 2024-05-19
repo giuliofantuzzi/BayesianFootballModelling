@@ -111,10 +111,30 @@ team_means <- teams_pts %>%
   pull(key)
 # Reorder columns based on mean points
 teams_pts <- teams_pts[, team_means]
+# Compute the real points in order to add them in the mcmc_plot
+real_points= data.frame(
+  Team=teams,
+  Pts=NA
+)
+for (t in 1:n_teams){
+  n_wins= SerieA_data %>% filter(((ht==t) &(FTHG>FTAG)) | ((at==t) & (FTHG<FTAG)))%>% nrow() 
+  n_draws= SerieA_data %>% filter(((ht==t) | (at==t)) & (FTHG == FTAG))%>% nrow()
+  real_points$Pts[t]= 3*n_wins+n_draws
+}
+
+# Mcmc plot of the points distribution
 mcmc_intervals(teams_pts)+
   labs(title="Points at the end of the season",
        x = "Points",
        y= "Teams")+
+  geom_point(
+    data = real_points,
+    aes(x = Pts, y = Team), # Map color to a variable
+    size = 3.5,
+    shape=21,
+    color="black",
+    fill="indianred2"
+  )+
   theme(plot.title = element_text(hjust = 0.5,face = "bold",size=18),
         axis.title.x = element_text(size=12, face="bold", colour = "black"),
         axis.text.x = element_text(size=10, face="plain", colour = "black"),
