@@ -124,7 +124,7 @@ for (t in 1:n_teams){
 
 # Mcmc plot of the points distribution
 mcmc_intervals(teams_pts)+
-  labs(title="Points at the end of the season",
+  labs(title="Estimated final rankings",
        x = "Points",
        y= "Teams")+
   geom_point(
