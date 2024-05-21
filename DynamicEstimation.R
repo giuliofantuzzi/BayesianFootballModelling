@@ -39,13 +39,13 @@ if(!file.exists(MODELS_DIR)){
   dir.create(MODELS_DIR,recursive = T)
 }
 
-for(i in 20:n_matchdays){
+for(m in 19:n_matchdays){
   cat("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n")
   cat("Parameters estimation after matchday n.",i,"...\n")
   cat("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n")
   #---------------------------------------------------------------------------
   # (1) Training and test set for the current matchday
-  training<- SerieA_data[1:(10*i),c("HomeTeam","AwayTeam","FTHG","FTAG")]
+  training<- SerieA_data[1:(10*m),c("HomeTeam","AwayTeam","FTHG","FTAG")]
   training<- na.omit(training)
   # (2) Prepare the parameters for stan
   stan_paramters = list(
@@ -64,6 +64,6 @@ for(i in 20:n_matchdays){
                    seed = 16
   )
   # (4) Save the model
-  dir.create(paste0(MODELS_DIR,"matchday",i))
-  save(KN_model,file=paste0(MODELS_DIR,"matchday",i,"/KN_matchday",i,".rds"))
+  dir.create(paste0(MODELS_DIR,"matchday",m))
+  save(KN_model,file=paste0(MODELS_DIR,"matchday",m,"/KN_matchday",m,".rds"))
 }
