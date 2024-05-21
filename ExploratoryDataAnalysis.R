@@ -148,3 +148,19 @@ goals_conceeded %>%
         plot.title = element_text(hjust = 0.5,face = "bold")
   )
 #-------------------------------------------------------------------------------
+
+
+# Plot the goal difference and demonstrate skellam is good choice
+source("utils/my_skellam.R")
+GD=SerieA_2324$GD
+l1<- mean(SerieA_2324$FTHG)
+l2<- mean(SerieA_2324$FTAG)
+p=0.015
+
+plot(table(GD)/length(GD),xlab = "Goal Difference",ylab = "Count")
+x <- min(GD):max(GD)
+lines(x+0.1, my_dskellam(x,l1,l2), type = 'h', col = 'red', lwd = 2, lty = 2)
+lines(x+0.2, my_dzeroinflatedskellam(x,l1,l2,0.02), type = 'h', col = 'darkgreen', lwd = 2, lty = 2)
+legend("topright", legend = c("Empirical densities", "Skellam densities","ZI-Skellam densities"), lty = c(1,2), 
+        col = c("black", "red","darkgreen"))
+title("Validity check of my skellam rng")
