@@ -1,3 +1,4 @@
+library(skellam)
 my_dskellam <- function(x, lambda1, lambda2) {
   x=round(x) # to manage the case x is not integer
   return(exp(-(lambda1+lambda2))*(lambda1/lambda2)^{x/2}*besselI(x=2*sqrt(lambda1*lambda2),nu = abs(x)))
