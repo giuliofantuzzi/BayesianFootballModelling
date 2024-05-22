@@ -19,7 +19,8 @@ N_WARMUP=1000
 DATA_DIR= "data/"
 STAN_DIR= "stan/"
 SEASON="2122"
-MODELS_DIR= paste0("estimated_models/season_",SEASON,"/online_models/")
+ONLINE_MODELS_DIR= paste0("estimated_models/season_",SEASON,"/online_models/")
+OFFLINE_MODELS_DIR= paste0("estimated_models/season_",SEASON,"/models/")
 
 #-------------------------------------------------------------------------------
 # Data import and preparation
@@ -37,8 +38,8 @@ teams<- str_replace_all(teams, " ", "")
 #-------------------------------------------------------------------------------
 # Load the model
 #-------------------------------------------------------------------------------
-load(paste0(MODELS_DIR,"matchday",n_matchdays,"/KN_matchday",n_matchdays,".rds"))
-par_names<-  rownames(summary(KN_model)$summary)
+load(paste0(ONLINE_MODELS_DIR,"matchday",n_matchdays,"/KN_matchday",n_matchdays,".rds"))
+par_names<-  names(KN_model)
 useful_par_names<- par_names[!(grepl("raw", par_names))]
 print(KN_model,par=useful_par_names)
 posterior<- as.array(KN_model)
@@ -155,17 +156,33 @@ ggplot(scatterplot_df,aes(Att, Def)) +
 
 
 # Coefficients time series
-ts_df<- get_all_teams_data(teams_list=teams,start=19,end=36,models_dir_path =MODELS_DIR)
+offline_ts_df<- get_all_teams_data(teams_list=teams,start=19,end=38,models_dir_path =OFFLINE_MODELS_DIR)
 
-plot_list <- list()
-plot_list <- lapply(teams, function(t) {
-  plot_parameters_ts(team = t,complete_df = ts_df,start = 19,end = 38)
+offline_plot_list <- list()
+offline_plot_list <- lapply(teams, function(t) {
+  plot_parameters_ts(team = t,complete_df = offline_ts_df,start = 19,end = 38)
   }
 )
 
-(plot_list[[1]] | plot_list[[2]] |plot_list[[3]] | plot_list[[4]]) /
-  (plot_list[[5]] | plot_list[[6]] |plot_list[[7]] | plot_list[[8]]) /
-  (plot_list[[9]] | plot_list[[10]] |plot_list[[11]] | plot_list[[12]]) /
-  (plot_list[[13]] | plot_list[[14]] |plot_list[[15]] | plot_list[[16]]) /
-  (plot_list[[17]] | plot_list[[18]] |plot_list[[19]] | plot_list[[20]])
+(offline_plot_list[[1]] | offline_plot_list[[2]] |offline_plot_list[[3]] | offline_plot_list[[4]]) /
+  (offline_plot_list[[5]] | offline_plot_list[[6]] |offline_plot_list[[7]] | offline_plot_list[[8]]) /
+  (offline_plot_list[[9]] | offline_plot_list[[10]] |offline_plot_list[[11]] | offline_plot_list[[12]]) /
+  (offline_plot_list[[13]] | offline_plot_list[[14]] |offline_plot_list[[15]] | offline_plot_list[[16]]) /
+  (offline_plot_list[[17]] | offline_plot_list[[18]] |offline_plot_list[[19]] | offline_plot_list[[20]])
+
+
+online_ts_df<- get_all_teams_data(teams_list=teams,start=19,end=38,models_dir_path =ONLINE_MODELS_DIR)
+
+online_plot_list <- list()
+online_plot_list <- lapply(teams, function(t) {
+  plot_parameters_ts(team = t,complete_df = ts_df,start = 19,end = 38)
+}
+)
+
+(online_plot_list[[1]] | online_plot_list[[2]] |online_plot_list[[3]] | online_plot_list[[4]]) /
+  (online_plot_list[[5]] | online_plot_list[[6]] |online_plot_list[[7]] | online_plot_list[[8]]) /
+  (online_plot_list[[9]] | online_plot_list[[10]] |online_plot_list[[11]] | online_plot_list[[12]]) /
+  (online_plot_list[[13]] | online_plot_list[[14]] |online_plot_list[[15]] | online_plot_list[[16]]) /
+  (online_plot_list[[17]] | online_plot_list[[18]] |online_plot_list[[19]] | online_plot_list[[20]])
+
 
