@@ -3,11 +3,12 @@ title: "Bayesian modelling of football outcomes using the Skellam distribution"
 subtitle: "Final project of the Bayesian Statistics Course (University of Trieste, Master's degree in DSAI)"
 author: "Giulio Fantuzzi [SM3800012]"
 date: "`r Sys.Date()`"
-output: 
+output:
   prettydoc::html_pretty:
-    theme: cayman
-    toc: yes
+     theme: cayman
+     toc: yes
 ---
+<!-- Some changes to the graphical options -->
 <style>
 .page-header {
   color: #fff;
@@ -17,6 +18,13 @@ output:
   background-repeat: no-repeat; /* Prevents the image from repeating */
   position: relative;
 }
+.subtitle, .date, .author {
+    color: white;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    font-weight: bold;
+    position: relative;
+    z-index: 1;
+  }
 </style>
 
 
@@ -40,5 +48,226 @@ To address this limitation, *Karlis and Ntzoufras* proposed an alternative appro
 │   ├── 📄 ...
 │   └── 📄 ...
 ...
+```
+```{r,echo=TRUE,warning=FALSE,message=FALSE}
+library(ggplot2)
+library(patchwork)
+library(tidyverse)
+library(dplyr,verbose = FALSE)
+library(knitr)
+library(kableExtra)
+source("../utils/my_skellam.R")
+
+N_CHAINS=4
+N_ITERS=11000
+N_WARMUP=1000
+DATA_DIR= "../data/"
+STAN_DIR= "../stan/"
+SEASON="2122"
+MODELS_DIR= paste0("../estimated_models/season_",SEASON,"/online_models/")
+```
+
+# Exploratory Data Analysis
+
+Exploratory Data Analysis (EDA) is a crucial step before jumping into any statistical model
+
+
+```{r}
+SerieA_data<- read.csv(file= paste0(DATA_DIR,"season_",SEASON,"/SerieA_",SEASON,".csv"))
+SerieA_data<- SerieA_data %>% select(c("HomeTeam","AwayTeam","FTHG","FTAG","FTR"))
+SerieA_data<- SerieA_data %>% mutate(GD=FTHG-FTAG)
+teams<- unique(SerieA_data$HomeTeam)
+n_games<- nrow(SerieA_data)
+n_teams<- length(teams)
+n_matchdays= ceiling(n_games/((n_teams)/2))
+ht= unlist(sapply(1:n_games,function (g) which(teams==SerieA_data$HomeTeam[g])))
+at= unlist(sapply(1:n_games,function (g) which(teams==SerieA_data$AwayTeam[g])))
+teams<- str_replace_all(teams, " ", "")
+```
+
+
+1) Is skellam distribution OK?
+```{r,echo=FALSE,fig.align='center',dpi=200,fig.width=8, fig.height=5}
+GD=SerieA_data$GD
+l1<- mean(SerieA_data$FTHG)
+l2<- mean(SerieA_data$FTAG)
+p=0.015
+
+plot(table(GD)/length(GD),xlab = "Goal Difference",ylab = "Density")
+x <- min(GD):max(GD)
+lines(x+0.1, my_dskellam(x,l1,l2), type = 'h', col = '#EC7063', lwd = 2, lty = 2)
+lines(x+0.2, my_dzeroinflatedskellam(x,l1,l2,0.02), type = 'h', col = '#4FB448', lwd = 2, lty = 2)
+legend("topright", legend = c("Empirical", "Skellam","ZI-Skellam"), lty = c(1,2), 
+        col = c("black", "#EC7063","#4FB448"))
+title("Skellam fit on data")
+
+```
+
+
+2) Look at how results were distributed:
+
+```{r,echo=FALSE,fig.align='center',fig.width=5, fig.height=4}
+SerieA_data<- SerieA_data %>% mutate(FinalResult=ifelse(GD>0,"HomeWin",ifelse(GD<0,"AwayWin","Draw")))
+SerieA_data %>%
+  count(FinalResult) %>%
+  ggplot(aes(x = reorder(FinalResult, -n), y = n/nrow(SerieA_data), fill = FinalResult)) + 
+  geom_bar(stat = "identity",col="black") +
+  theme_minimal() + 
+  labs(x = "", y = "Frequency", title = "Type of Victory",fill = "Match Outcome") +
+  scale_fill_manual(values = c("HomeWin" = "#2A6426",
+                               "AwayWin" = "#B0F1AC",
+                               "Draw" = "#4FB448"))+
+  theme(axis.text.x = element_text(size=10, face="bold", colour = "black"),
+        axis.title.y = element_text(size=12, face="bold", colour = "black"),
+        axis.text.y = element_text(size=10, face="plain", colour = "black"),
+        plot.title = element_text(hjust = 0.5,face = "bold"),
+        legend.title = element_text(face="bold")
+  )
+```
+--->Home effect is evident, and it is will
+
+```{r}
+# Preliminary steps required to make plots
+home_scored <- aggregate(SerieA_data$FTHG, list(SerieA_data$HomeTeam), FUN = sum) 
+away_scored <- aggregate(SerieA_data$FTAG, list(SerieA_data$AwayTeam), FUN = sum)
+home_conceeded <- aggregate(SerieA_data$FTAG, list(SerieA_data$HomeTeam), FUN = sum) 
+away_conceeded <- aggregate(SerieA_data$FTHG, list(SerieA_data$AwayTeam), FUN = sum)
+
+colnames(home_scored) <- c("team", "home_scored")
+colnames(away_scored) <- c("team", "away_scored")
+colnames(home_conceeded) <- c("team", "home_conceeded")
+colnames(away_conceeded) <- c("team", "away_conceeded")
+
+goals_scored <- merge(home_scored, away_scored, by = "team")
+goals_scored$tot_goals <- goals_scored$home_scored + goals_scored$away_scored
+
+goals_conceeded <- merge(home_conceeded, away_conceeded, by = "team")
+goals_conceeded$tot_goals <- goals_conceeded$home_conceeded + goals_conceeded$away_conceeded
+```
+
+```{r,echo=FALSE,dpi=200,fig.width=15, fig.height=8}
+goals_scored_plot<- goals_scored %>%
+  mutate(team = fct_reorder(team, tot_goals))  %>%
+  ggplot(aes(x = team, y = tot_goals)) +
+  geom_bar(stat = "identity", col="black",fill = "green4", alpha = 0.6, width = 0.8) +
+  geom_text(aes(label = tot_goals),hjust=-0.3,size = 4,color = "black") +
+  coord_flip() +
+  theme_minimal() +
+  labs(x="Team",y = 'Number of Goals', title = 'Number of goals scored by team')+
+  theme(axis.text.x = element_text(size=10, face="plain", colour = "black"),
+        axis.title.x = element_text(size=12, face="bold", colour = "black"),
+        axis.title.y = element_text(size=12, face="bold", colour = "black"),
+        axis.text.y = element_text(size=10, face="plain", colour = "black"),
+        plot.title = element_text(hjust = 0.5,face = "bold")
+  )
+
+goals_conceeded_plot<- goals_conceeded %>%
+  mutate(team = fct_reorder(team, tot_goals))  %>%
+  ggplot(aes(x = team, y = tot_goals)) +
+  geom_bar(stat = "identity", col="black",fill = "red3", alpha = 0.6, width = 0.8) +
+  geom_text(aes(label = tot_goals),hjust=-0.3,size = 4,color = "black") +
+  coord_flip() +
+  theme_minimal() +
+  labs(x="Team",y = 'Number of Goals', title = 'Number of goals conceeded by team')+
+  theme(axis.text.x = element_text(size=10, face="plain", colour = "black"),
+        axis.title.x = element_text(size=12, face="bold", colour = "black"),
+        axis.title.y = element_text(size=12, face="bold", colour = "black"),
+        axis.text.y = element_text(size=10, face="plain", colour = "black"),
+        plot.title = element_text(hjust = 0.5,face = "bold")
+  )
+goals_scored_plot |goals_conceeded_plot
+```
+
+```{r,echo=FALSE,dpi=200,fig.width=15, fig.height=8}
+
+# Goals scored and conceeded by team Home vs Away
+goals_scored_HvsA_plot<- goals_scored %>% 
+  select(c(team,home_scored,away_scored)) %>%
+  pivot_longer(cols = c(home_scored, away_scored), 
+               names_to = "Stadium", 
+               values_to = "Goals") %>%
+  ggplot(aes(x = team, y = Goals, fill = Stadium)) +
+  geom_bar(stat = "identity", position = "dodge",width = 0.5,col="black") +
+  scale_fill_manual(values = c("home_scored" = "#145A32", "away_scored" = "#52BE80"),
+                    labels = c("home_scored" = "Home", "away_scored" = "Away"))+
+  coord_flip()+
+  labs(title = "Goals scored by team (Home vs Away)", 
+       x = "Team", 
+       y = "Goals")+
+  theme_minimal()+
+  theme(axis.text.x = element_text(size=10, face="plain", colour = "black"),
+        axis.title.x = element_text(size=12, face="bold", colour = "black"),
+        axis.title.y = element_text(size=12, face="bold", colour = "black"),
+        axis.text.y = element_text(size=10, face="plain", colour = "black"),
+        plot.title = element_text(hjust = 0.5,face = "bold")
+  )
+
+# Goals conceeded Home vs Away
+goals_conceeded_HvsA_plot<- goals_conceeded %>% 
+  select(c(team,home_conceeded,away_conceeded)) %>%
+  pivot_longer(cols = c(home_conceeded, away_conceeded), 
+               names_to = "Stadium", 
+               values_to = "Goals") %>%
+  ggplot(aes(x = team, y = Goals, fill = Stadium)) +
+  geom_bar(stat = "identity", position = "dodge",width = 0.5,col="black") +
+  scale_fill_manual(values = c("home_conceeded" = "#641E16", "away_conceeded" = "#EC7063"),
+                    labels = c("home_conceeded" = "Home", "away_conceeded" = "Away"))+
+  coord_flip()+
+  labs(title = "Goals conceeded by team (Home vs Away)", 
+       x = "Team", 
+       y = "Goals")+
+  theme_minimal()+
+  theme(axis.text.x = element_text(size=10, face="plain", colour = "black"),
+        axis.title.x = element_text(size=12, face="bold", colour = "black"),
+        axis.title.y = element_text(size=12, face="bold", colour = "black"),
+        axis.text.y = element_text(size=10, face="plain", colour = "black"),
+        plot.title = element_text(hjust = 0.5,face = "bold")
+  )
+goals_scored_HvsA_plot |goals_conceeded_HvsA_plot
+```
+
+Final Rankings:
+```{r}
+SerieA_data <- SerieA_data %>%
+  mutate(HomePoints = ifelse(FinalResult == "HomeWin", 3, ifelse(FinalResult == "Draw", 1, 0)),
+         AwayPoints = ifelse(FinalResult == "AwayWin", 3, ifelse(FinalResult == "Draw", 1, 0)))
+
+# Aggregate points for each team
+total_points <- SerieA_data %>%
+  select(HomeTeam,AwayTeam,FTHG,FTAG,HomePoints,AwayPoints) %>%
+  group_by(Team = HomeTeam) %>%
+  summarise(TotalPoints = sum(HomePoints),
+            GS = sum(FTHG),
+            GC= sum(FTAG)) %>%
+  bind_rows(
+    SerieA_data %>%
+      group_by(Team = AwayTeam) %>%
+      summarise(TotalPoints = sum(AwayPoints),
+                GS = sum(FTAG),
+                GC= sum(FTHG))
+  ) %>%
+  group_by(Team) %>%
+  summarise(TotalPoints=sum(TotalPoints),
+            GS = sum(GS),
+            GC= sum(GC)) %>%
+  arrange(desc(TotalPoints)) %>%
+  mutate(Position = row_number(),
+         GD=GS-GC) %>%
+  select(Position, Team, TotalPoints,GS,GC,GD) 
+
+
+total_points %>%
+  kbl(caption = "Serie A 2021-2022 final rankings", align = 'c') %>%
+  kable_styling(font_size = 12, full_width = F) %>%
+  column_spec(1, width = "5em") %>%
+  column_spec(2, width = "10em") %>%
+  column_spec(3, width = "5em",bold = T) %>%
+  column_spec(4:6, width = "5em",bold = F) %>%
+  row_spec(0, background = "#FFFFFF", color = "#000000",bold=T) %>%  # White header
+  row_spec(1:4, background = "#8AD1F3") %>%  # Champions League
+  row_spec(5:6, background = "#EEA256") %>%  # Orange
+  row_spec(7, background = "#E1D625") %>%  # Orange
+  row_spec((nrow(total_points)-2):nrow(total_points), background = "#FF9E94") %>%
+  row_spec(1:nrow(total_points), extra_css = "border-top: 1px solid black;")
 ```
 
