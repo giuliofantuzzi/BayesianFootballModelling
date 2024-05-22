@@ -27,6 +27,7 @@ output:
   }
 </style>
 
+---
 
 # Introduction
 
@@ -35,6 +36,8 @@ Predicting football match outcomes has long intrigued statisticians and sports a
 In previous work, I have explored goal-based models such as those proposed by *Maher* and *Dixon and Coles*. *Maher*'s model describes the outcome of a match by modeling the goals of the two teams independently using Poisson distributions. *Dixon and Coles* enhanced this basic model by introducing correlation between the teams' goal-scoring processes and accounting for the home advantage effect. While these models have been widely used due to their simplicity and effectiveness, they rely on the assumption that goals follow a Poisson distribution. This assumption, however, can be questionable in certain leagues where overdispersion—where the sample variance exceeds the sample mean— has been observed in the number of goals.
 
 To address this limitation, *Karlis and Ntzoufras* proposed an alternative approach by <u>focusing on the goal difference rather than the individual goal counts of each team</u>. Their method utilizes the Skellam distribution, which models the difference between two independent Poisson-distributed random variables. This shift in focus eliminates the need to account for the correlation between teams' scores directly and avoids the assumption of Poisson marginals. Although the Skellam-based model cannot predict exact match scores, it offers valuable insights into the likely goal difference, thereby simplifying the complexity associated with modeling individual goal counts. The application of Bayesian methods in this context allows for the incorporation of prior knowledge and continuous updating of model parameters as new data becomes available, enhancing the predictive power and adaptability of the model.
+
+---
 
 # Project structure
 
@@ -66,6 +69,8 @@ STAN_DIR= "../stan/"
 SEASON="2122"
 MODELS_DIR= paste0("../estimated_models/season_",SEASON,"/online_models/")
 ```
+
+---
 
 # Exploratory Data Analysis
 
@@ -164,11 +169,11 @@ goals_scored_plot<- goals_scored %>%
 goals_conceeded_plot<- goals_conceeded %>%
   mutate(team = fct_reorder(team, tot_goals))  %>%
   ggplot(aes(x = team, y = tot_goals)) +
-  geom_bar(stat = "identity", col="black",fill = "red3", alpha = 0.6, width = 0.8) +
+  geom_bar(stat="identity",col="black",fill ="red3",alpha=0.6,width=0.8)+
   geom_text(aes(label = tot_goals),hjust=-0.3,size = 4,color = "black") +
   coord_flip() +
   theme_minimal() +
-  labs(x="Team",y = 'Number of Goals', title = 'Number of goals conceeded by team')+
+  labs(x="Team",y ='Number of Goals',title ='Number of goals conceeded by team')+
   theme(axis.text.x = element_text(size=10, face="plain", colour = "black"),
         axis.title.x = element_text(size=12, face="bold", colour = "black"),
         axis.title.y = element_text(size=12, face="bold", colour = "black"),
@@ -188,8 +193,10 @@ goals_scored_HvsA_plot<- goals_scored %>%
                values_to = "Goals") %>%
   ggplot(aes(x = team, y = Goals, fill = Stadium)) +
   geom_bar(stat = "identity", position = "dodge",width = 0.5,col="black") +
-  scale_fill_manual(values = c("home_scored" = "#145A32", "away_scored" = "#52BE80"),
-                    labels = c("home_scored" = "Home", "away_scored" = "Away"))+
+  scale_fill_manual(values = c("home_scored" = "#145A32",
+                               "away_scored" = "#52BE80"),
+                    labels = c("home_scored" = "Home",
+                               "away_scored" = "Away"))+
   coord_flip()+
   labs(title = "Goals scored by team (Home vs Away)", 
        x = "Team", 
@@ -210,8 +217,10 @@ goals_conceeded_HvsA_plot<- goals_conceeded %>%
                values_to = "Goals") %>%
   ggplot(aes(x = team, y = Goals, fill = Stadium)) +
   geom_bar(stat = "identity", position = "dodge",width = 0.5,col="black") +
-  scale_fill_manual(values = c("home_conceeded" = "#641E16", "away_conceeded" = "#EC7063"),
-                    labels = c("home_conceeded" = "Home", "away_conceeded" = "Away"))+
+  scale_fill_manual(values = c("home_conceeded" = "#641E16",
+                               "away_conceeded" = "#EC7063"),
+                    labels = c("home_conceeded" = "Home",
+                               "away_conceeded" = "Away"))+
   coord_flip()+
   labs(title = "Goals conceeded by team (Home vs Away)", 
        x = "Team", 
@@ -227,12 +236,13 @@ goals_scored_HvsA_plot |goals_conceeded_HvsA_plot
 ```
 
 Final Rankings:
-```{r}
+```{r,echo=T}
 SerieA_data <- SerieA_data %>%
-  mutate(HomePoints = ifelse(FinalResult == "HomeWin", 3, ifelse(FinalResult == "Draw", 1, 0)),
-         AwayPoints = ifelse(FinalResult == "AwayWin", 3, ifelse(FinalResult == "Draw", 1, 0)))
+  mutate(HomePoints = ifelse(FinalResult == "HomeWin", 3,
+                             ifelse(FinalResult == "Draw", 1, 0)),
+         AwayPoints = ifelse(FinalResult == "AwayWin", 3,
+                             ifelse(FinalResult == "Draw", 1, 0)))
 
-# Aggregate points for each team
 total_points <- SerieA_data %>%
   select(HomeTeam,AwayTeam,FTHG,FTAG,HomePoints,AwayPoints) %>%
   group_by(Team = HomeTeam) %>%
@@ -254,8 +264,9 @@ total_points <- SerieA_data %>%
   mutate(Position = row_number(),
          GD=GS-GC) %>%
   select(Position, Team, TotalPoints,GS,GC,GD) 
+```
 
-
+```{r,echo=F}
 total_points %>%
   kbl(caption = "Serie A 2021-2022 final rankings", align = 'c') %>%
   kable_styling(font_size = 12, full_width = F) %>%
@@ -263,11 +274,16 @@ total_points %>%
   column_spec(2, width = "10em") %>%
   column_spec(3, width = "5em",bold = T) %>%
   column_spec(4:6, width = "5em",bold = F) %>%
-  row_spec(0, background = "#FFFFFF", color = "#000000",bold=T) %>%  # White header
-  row_spec(1:4, background = "#8AD1F3") %>%  # Champions League
-  row_spec(5:6, background = "#EEA256") %>%  # Orange
-  row_spec(7, background = "#E1D625") %>%  # Orange
+  row_spec(0, background = "#FFFFFF", color = "#000000",bold=T) %>%
+  # Champions League
+  row_spec(1:4, background = "#8AD1F3") %>% 
+  # Europa League
+  row_spec(5:6, background = "#EEA256") %>%
+  # Conference League
+  row_spec(7, background = "#E1D625") %>%  
+  # Relegation
   row_spec((nrow(total_points)-2):nrow(total_points), background = "#FF9E94") %>%
   row_spec(1:nrow(total_points), extra_css = "border-top: 1px solid black;")
 ```
-
+---
+# Model Formulation
