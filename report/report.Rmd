@@ -11,29 +11,27 @@ output:
 <!-- Some changes to the graphical options -->
 <style>
 .page-header {
-  color: #fff;
+  color: black;
   text-align: center;
-  background-image: url('wallpaper.jpeg'); /* Replace 'path/to/your/image.jpg' with the actual path to your image */
+  background-image: url('pitch.jpeg'); 
   background-size: cover; /* Ensures the image covers the entire area */
   background-repeat: no-repeat; /* Prevents the image from repeating */
   position: relative;
 }
 .subtitle, .date, .author {
-    color: white;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    color: black;
     font-weight: bold;
     position: relative;
     z-index: 1;
   }
 </style>
-
 ---
 
 # Introduction
 
 Predicting football match outcomes has long intrigued statisticians and sports analysts. The inherently random nature of sports events, coupled with various influencing factors like team strength, players performance, and home advantage, presents a challenging yet fascinating problem for statistical modeling.
 
-In previous work, I have explored goal-based models such as those proposed by *Maher* and *Dixon and Coles*. *Maher*'s model describes the outcome of a match by modeling the goals of the two teams independently using Poisson distributions. *Dixon and Coles* enhanced this basic model by introducing correlation between the teams' goal-scoring processes and accounting for the home advantage effect. While these models have been widely used due to their simplicity and effectiveness, they rely on the assumption that goals follow a Poisson distribution. This assumption, however, can be questionable in certain leagues where overdispersion—where the sample variance exceeds the sample mean— has been observed in the number of goals.
+In previous projects, I have explored goal-based models such as those proposed by *Maher* and *Dixon and Coles*. *Maher*'s model describes the outcome of a match by modeling the goals of the two teams independently using Poisson distributions. *Dixon and Coles* enhanced this basic model by introducing correlation between the teams' goal-scoring processes and accounting for the home advantage effect. While these models have been widely used due to their simplicity and effectiveness, they rely on the assumption that goals follow a Poisson distribution. This assumption, however, can be questionable in certain leagues where overdispersion—where the sample variance exceeds the sample mean— has been observed in the number of goals.
 
 To address this limitation, *Karlis and Ntzoufras* proposed an alternative approach by <u>focusing on the goal difference rather than the individual goal counts of each team</u>. Their method utilizes the Skellam distribution, which models the difference between two independent Poisson-distributed random variables. This shift in focus eliminates the need to account for the correlation between teams' scores directly and avoids the assumption of Poisson marginals. Although the Skellam-based model cannot predict exact match scores, it offers valuable insights into the likely goal difference, thereby simplifying the complexity associated with modeling individual goal counts. The application of Bayesian methods in this context allows for the incorporation of prior knowledge and continuous updating of model parameters as new data becomes available, enhancing the predictive power and adaptability of the model.
 
@@ -41,6 +39,7 @@ To address this limitation, *Karlis and Ntzoufras* proposed an alternative appro
 
 # Project structure
 
+Spiegare la struttura, dire che mi sono focalizzato su serie A 2021-22 e che ho usato Stan
 **TO-BE-DONE**
 ```
 📂 project/
@@ -54,12 +53,17 @@ To address this limitation, *Karlis and Ntzoufras* proposed an alternative appro
 ```
 ```{r,echo=TRUE,warning=FALSE,message=FALSE}
 library(ggplot2)
+library(ggimage)
 library(patchwork)
 library(tidyverse)
 library(dplyr,verbose = FALSE)
 library(knitr)
 library(kableExtra)
+library(bayesplot)
 source("../utils/my_skellam.R")
+source("../utils/get_all_teams_data.R")
+source("../utils/plot_parameters_ts.R")
+
 
 N_CHAINS=4
 N_ITERS=11000
@@ -67,14 +71,16 @@ N_WARMUP=1000
 DATA_DIR= "../data/"
 STAN_DIR= "../stan/"
 SEASON="2122"
-MODELS_DIR= paste0("../estimated_models/season_",SEASON,"/online_models/")
+OFFLINE_MODELS_DIR= paste0("../estimated_models/season_",SEASON,"/offline_models/")
+ONLINE_MODELS_DIR= paste0("../estimated_models/season_",SEASON,"/online_models/")
 ```
 
 ---
 
 # Exploratory Data Analysis
 
-Exploratory Data Analysis (EDA) is a crucial step before jumping into any statistical model
+Before delving into model construction, it is crucial to gain a comprehensive understanding of the data. The exploratory data analysis (EDA) phase, through its visualizations, provide a glimpse into the underlying dynamics but also inform the modeling approach by highlighting factors that influence match outcomes. By analyzing various aspects of the data, such as goal differences, result distribution, and team performance, we are going to lay the groundwork for developing the models.
+
 
 
 ```{r}
@@ -87,11 +93,14 @@ n_teams<- length(teams)
 n_matchdays= ceiling(n_games/((n_teams)/2))
 ht= unlist(sapply(1:n_games,function (g) which(teams==SerieA_data$HomeTeam[g])))
 at= unlist(sapply(1:n_games,function (g) which(teams==SerieA_data$AwayTeam[g])))
+SerieA_data$ht=ht
+SerieA_data$at=at
 teams<- str_replace_all(teams, " ", "")
 ```
 
 
-1) Is skellam distribution OK?
+The initial variable I decided to inspect was, of course, the goal differences, as it represents our phenomenon of interest. The plot below shows the empirical data and overlays it with theoretical Skellam distributions (both the standard and the zero-inflated version),  and highlights how well the theoretical distributions align with the observed data.
+
 ```{r,echo=FALSE,fig.align='center',dpi=200,fig.width=8, fig.height=5}
 GD=SerieA_data$GD
 l1<- mean(SerieA_data$FTHG)
@@ -102,16 +111,16 @@ plot(table(GD)/length(GD),xlab = "Goal Difference",ylab = "Density")
 x <- min(GD):max(GD)
 lines(x+0.1, my_dskellam(x,l1,l2), type = 'h', col = '#EC7063', lwd = 2, lty = 2)
 lines(x+0.2, my_dzeroinflatedskellam(x,l1,l2,0.02), type = 'h', col = '#4FB448', lwd = 2, lty = 2)
-legend("topright", legend = c("Empirical", "Skellam","ZI-Skellam"), lty = c(1,2), 
+legend("topright", legend = c("Empirical", "Skellam","ZI-Skellam"), lty = c(1,2,2), 
         col = c("black", "#EC7063","#4FB448"))
 title("Skellam fit on data")
 
 ```
 
 
-2) Look at how results were distributed:
+Next, we investigate the distribution of results (encoded as Home-win, Draw, and Away-win) across the entire season. As depicted in the plot below, *HomeWin* emerges as the majority class. This observation informs our modeling approach, where we will introduce a home effect parameter to account for the slight advantage of playing matches in one's own stadium.
 
-```{r,echo=FALSE,fig.align='center',fig.width=5, fig.height=4}
+```{r,echo=FALSE,fig.align='center',fig.width=8, fig.height=4,dpi=300}
 SerieA_data<- SerieA_data %>% mutate(FinalResult=ifelse(GD>0,"HomeWin",ifelse(GD<0,"AwayWin","Draw")))
 SerieA_data %>%
   count(FinalResult) %>%
@@ -122,14 +131,15 @@ SerieA_data %>%
   scale_fill_manual(values = c("HomeWin" = "#2A6426",
                                "AwayWin" = "#B0F1AC",
                                "Draw" = "#4FB448"))+
-  theme(axis.text.x = element_text(size=10, face="bold", colour = "black"),
-        axis.title.y = element_text(size=12, face="bold", colour = "black"),
-        axis.text.y = element_text(size=10, face="plain", colour = "black"),
+  theme(#axis.text.x = element_text(size=10, face="bold", colour = "black"),
+  #       axis.title.y = element_text(size=12, face="bold", colour = "black"),
+  #       axis.text.y = element_text(size=10, face="plain", colour = "black"),
         plot.title = element_text(hjust = 0.5,face = "bold"),
         legend.title = element_text(face="bold")
   )
 ```
---->Home effect is evident, and it is will
+
+Another interesing aspect to explore are the goal statistics by team. In particular, by examining goals scored and conceded by each team, we gain valuable insights into the potential ranking of attack and defense coefficients in our upcoming model. Additionally, distinguishing between home and away matches underscores the significance of incorporating the home effect as a model parameter. These visualizations not only provide a glimpse into the team dynamics but also inform the modeling approach by highlighting factors that influence match outcomes.
 
 ```{r}
 # Preliminary steps required to make plots
@@ -150,7 +160,7 @@ goals_conceeded <- merge(home_conceeded, away_conceeded, by = "team")
 goals_conceeded$tot_goals <- goals_conceeded$home_conceeded + goals_conceeded$away_conceeded
 ```
 
-```{r,echo=FALSE,dpi=200,fig.width=15, fig.height=8}
+```{r,echo=FALSE,dpi=200,fig.width=16, fig.height=9}
 goals_scored_plot<- goals_scored %>%
   mutate(team = fct_reorder(team, tot_goals))  %>%
   ggplot(aes(x = team, y = tot_goals)) +
@@ -234,8 +244,67 @@ goals_conceeded_HvsA_plot<- goals_conceeded %>%
   )
 goals_scored_HvsA_plot |goals_conceeded_HvsA_plot
 ```
+Comment: only five teams (out of a total of twenty) have scored more goals away than at home. Except for Napoli, which has scored the same number of goals at home and away, all other teams have had better offensive performances when playing in their own stadium. Symmetrically, only six teams have conceded more goals at home than away. All other teams have shown better defensive performances when playing in their own stadium (Inter, Salernitana, and Udinese, actually conceded the same number of goals at home and away).
 
-Final Rankings:
+The existence of a home effect is suggested also by the useful results achieved by each team, differentiated between outcomes at home and away:
+
+```{r,}
+useful_results_df<- SerieA_data %>%
+  group_by(HomeTeam) %>%
+  summarize(UsefulResultsHome = sum(FTR %in% c("H", "D"))) %>%
+  left_join(SerieA_data %>% 
+              group_by(AwayTeam) %>%
+              summarize(UsefulResultsAway = sum(FTR %in% c("D", "A"))),
+            by = c("HomeTeam" = "AwayTeam")) %>%
+  rename(Team=HomeTeam)
+```
+
+```{r,echo=FALSE,dpi=200,fig.width=15, fig.height=8}
+
+useful_results_plot<- useful_results_df %>%pivot_longer(cols = c(UsefulResultsHome, UsefulResultsAway), 
+               names_to = "Stadium", 
+               values_to = "UsefulResults") %>%
+  ggplot(aes(x = Team, y = UsefulResults, fill = Stadium)) +
+  geom_bar(stat = "identity", position = "dodge",width = 0.5,col="black") +
+  scale_fill_manual(values = c("UsefulResultsAway" = "#5499C7",
+                               "UsefulResultsHome" = "#154360"),
+                    labels = c("UsefulResultsAway" = "Away",
+                               "UsefulResultsHome" = "Home"))+
+  coord_flip()+
+  labs(title = "Useful results by team (Home vs Away)", 
+       x = "Team", 
+       y = "N. of useful results")+
+  theme_minimal()+
+  theme(axis.text.x = element_text(size=10, face="plain", colour = "black"),
+        axis.title.x = element_text(size=12, face="bold", colour = "black"),
+        axis.title.y = element_text(size=12, face="bold", colour = "black"),
+        axis.text.y = element_text(size=10, face="plain", colour = "black"),
+        plot.title = element_text(hjust = 0.5,face = "bold")
+  )
+
+useful_results_difference_plot<- useful_results_df %>%
+  mutate(Stadium=ifelse(UsefulResultsHome>UsefulResultsAway,"Home","Away")) %>%
+  ggplot(aes(x = Team, y = (UsefulResultsHome-UsefulResultsAway), fill = Stadium)) +
+  geom_bar(stat = "identity", position = "dodge",width = 0.5,col="black") +
+  scale_fill_manual(values = c("Home" = "#154360", "Away" = "#5499C7"))+
+  coord_flip()+
+  labs(title = "Useful results by team (difference Home vs Away)", 
+       x = "Team", 
+       y = "N. of useful results")+
+  theme_minimal()+
+  theme(axis.text.x = element_text(size=10, face="plain", colour = "black"),
+        axis.title.x = element_text(size=12, face="bold", colour = "black"),
+        axis.title.y = element_text(size=12, face="bold", colour = "black"),
+        axis.text.y = element_text(size=10, face="plain", colour = "black"),
+        plot.title = element_text(hjust = 0.5,face = "bold")
+  )
+
+useful_results_plot | useful_results_difference_plot
+```
+
+
+Finally, an interesting insight that can be extracted from our data lies in the Final Rankings of the league:
+
 ```{r,echo=T}
 SerieA_data <- SerieA_data %>%
   mutate(HomePoints = ifelse(FinalResult == "HomeWin", 3,
@@ -248,21 +317,21 @@ total_points <- SerieA_data %>%
   group_by(Team = HomeTeam) %>%
   summarise(TotalPoints = sum(HomePoints),
             GS = sum(FTHG),
-            GC= sum(FTAG)) %>%
+            GC = sum(FTAG)) %>%
   bind_rows(
     SerieA_data %>%
       group_by(Team = AwayTeam) %>%
       summarise(TotalPoints = sum(AwayPoints),
                 GS = sum(FTAG),
-                GC= sum(FTHG))
+                GC = sum(FTHG))
   ) %>%
   group_by(Team) %>%
   summarise(TotalPoints=sum(TotalPoints),
             GS = sum(GS),
-            GC= sum(GC)) %>%
+            GC = sum(GC)) %>%
   arrange(desc(TotalPoints)) %>%
   mutate(Position = row_number(),
-         GD=GS-GC) %>%
+         GD =GS-GC) %>%
   select(Position, Team, TotalPoints,GS,GC,GD) 
 ```
 
@@ -286,4 +355,709 @@ total_points %>%
   row_spec(1:nrow(total_points), extra_css = "border-top: 1px solid black;")
 ```
 ---
+
 # Model Formulation
+
+As mentioned in the [Introduction](#introduction), we can use the Skellam distribution to model goal difference of a football match. More precisely, the goal difference of the match between teams $i$ and $j$ (where we adopt the convention of $i$ being the home team) is described by:
+\begin{equation}
+GD_{i,j} \sim Skellam\left(\theta^{(H)}_{(i,j)},\theta^{(A)}_{(i,j)}\right)
+\end{equation}
+with:
+\begin{align*}
+\theta^{(H)}_{(i,j)} &= \exp\{\mu + h_{eff} + att_{(i)} + def_{(j)}\}\\[0.2cm]
+\theta^{(A)}_{(i,j)} &= \exp\{\mu + + att_{(j)} + def_{(i)}\}
+\end{align*}
+
+Under the above parametrization, all parameters have a straightforward interpretation:
+
+- $h_{eff}$ is the **home effect**, which describes the advantage for a team of playing the match at its stadium;
+- $\mu$ is a constant, representing the average "ability" (combining attack and defence) of a team in the analyzed league;
+- $att_{(t)}$ represents the **attack strength** of team $t$;
+- $def_{(t)}$ represents the **defence weakness** of team $t$;
+
+**Some notes:**
+
+- Since we consider a "teams's population intercept" ($\mu$), then $att_{(t)}$ and $def_{(t)}$ should be interpreted as deviations of the net attacking and defensive abilities from a team of average performance;
+- In order to ensure the identifiability of the model, some constraints are imposed over the attack and defence coefficients:
+$$\sum_{t=1}^{T} {att_{t}} = 0 \hspace{0.5cm};\hspace{0.5cm}\sum_{t=1}^{T} {def_{t}} = 0 $$
+- The probability function of our Skellam is:
+$$f_{S}\left(x,\theta_1,\theta_2\right)= e^{-(\theta_1+\theta_2)} \left(\frac{\theta_1}{\theta_2}\right)^{x/2} I_{|x|}\left(2\sqrt{\theta_1\theta_2}\right)$$
+with $x \in \mathbb{Z},\theta_1,\theta_2 >0$ and where $I_{|r|}(\bullet)$ is the modified Bessel function of order r (check it [here](https://en.wikipedia.org/wiki/Bessel_function#Modified_Bessel_functions))
+
+
+In my previous experience with goal-based models, I noticed that the number of draws (and the corresponding probability) tends to be underestimated. To address this, I explored the idea proposed by Karlis and Ntzoufras of using a zero-inflated version of the Skellam distribution. This approach seemed promising to me, and its probability distribution is defined as:
+\begin{align*}
+  f_{ZIS}\left(x,\theta_1,\theta_2,p\right) =
+  \begin{cases}
+    (1-p)\cdot f_{S}\left(x,\theta_1,\theta_2\right)\hspace{0.5cm}&\text{if $x\neq0$}\\[0.3cm]
+    p+(1-p)\cdot f_{S}\left(x,\theta_1,\theta_2\right)\hspace{0.5cm}&\text{if $x=0$}
+  \end{cases}
+\end{align*}
+with $x \in \mathbb{Z},\theta_1,\theta_2 >0$ and $p \in [0,1]$
+
+To fully specify a Bayesian model, we need to define prior distributions for the model parameters. In my analysis, I chose not to incorporate any external information from previous seasons. In such cases, Karlis and Ntzoufras suggested using normal prior distributions with a mean of zero and a large variance (e.g. $10^4$) to express prior ignorance. However, since the Stan documentation discourages non-informative priors, I set my priors to be weakly informative (still I assumed them to be normal):
+
+\begin{align*}
+  \mu \sim N(0,10)\\[0.2cm]
+  H_{eff} \sim N(0,10)\\[0.2cm]
+  att_{(\bullet)} \sim N(0,10)\\[0.2cm]
+  def_{(\bullet)} \sim N(0,10)\\[0.2cm]
+  p \sim U(0,1)
+\end{align*}
+
+In addition to the standard approach, I considered an online learning approach. In the Bayesian framework, we typically start with a prior distribution and update it with observed data to obtain a posterior distribution. When new data becomes available, this posterior can serve as the prior for the next update and so on. Despite concerns about specifying overly informative priors, I was curious to compare the online learning approach with the traditional "offline" model, where the "information" that updates our knowledge derives (almost) only from the data.
+
+**Note**: in principle we don't know the functional form of the posterior distribution. However, in my analysis I assumed my priors to be normal, updating only their location and scale matchday by matchday.
+
+The formulation of the online model has the same likelihood of the offline one, except from the priors specification. More precisely, at a certain matchday $m$, the priors will be the following:
+
+\begin{align*}
+  \mu &\sim N\big(MAP(\mu)^{(m-1)},\sigma_{\mu}^{(m-1)}\big)\\[0.2cm]
+  H_{eff} &\sim \big(MAP(H_{eff})^{(m-1)},\sigma_{H_{eff}}^{(m-1)}\big)\\[0.2cm]
+  att_{(\bullet)} &\sim \big(MAP(att_{(\bullet)}\;)^{(m-1)},\sigma_{att_{(\bullet)}}^{(m-1)}\big)\\[0.2cm]
+  def_{(\bullet)} &\sim \big(MAP(def_{(\bullet)}\;)^{(m-1)},\sigma_{def_{(\bullet)}}^{(m-1)}\big)\\[0.2cm]
+  p &\sim U(0,1)
+\end{align*}
+
+---
+
+# Model implementation in `Stan`
+
+The models have been fully implemented using the `Stan` ecosystem and managed in R through the library `rstan`. I decided to follow the procedure illustrated by Karlis and Ntzoufras in their article, setting the following MCMC parameters:
+
+- `N_CHAINS`= 4
+- `N_ITERS`= 11000
+- `N_WARMUP`= 1000
+
+In what follows the main blocks of the stan files are illustrated.
+
+## Offline model
+
+- <u>Functions</u>: I had to define some custom functions, since `Stan` does not provide the log pmf of a Skellam
+  ```{R,echo=T,eval=F}
+  functions {
+    real skellam_lpmf(int k, real lambda1, real lambda2) {
+      real total;
+      real log_prob;
+      total = (- lambda1 - lambda2) + (log(lambda1) - log(lambda2)) * k / 2;
+      log_prob = total + log(modified_bessel_first_kind(k, 2 * sqrt(lambda1*lambda2)));
+      return log_prob;
+    }
+    real zero_inflated_skellam_lpmf(int k, real lambda1, real lambda2, real p) {
+      real base_prob;
+      real prob;
+      real log_prob;
+      base_prob = exp(skellam_lpmf(k|lambda1, lambda2));
+      if (k == 0){
+        prob = p + (1 - p) * base_prob;
+      }
+      else{
+        prob = (1 - p) * base_prob;
+      }
+      log_prob = log(prob);
+      return log_prob;
+    }
+  }
+  ```
+- <u>Data</u>:
+  ```{r,eval=FALSE}
+  data {
+    int<lower=1> n_teams;
+    int<lower=1> n_games;
+    array[n_games] int<lower=1, upper=n_teams> home_team;
+    array[n_games] int<lower=1, upper=n_teams> away_team;
+    array[n_games] int goal_difference;
+  }
+  ```
+- <u>Parameters and transformed parameters</u>
+  ```{r,eval=FALSE}
+  parameters {
+    real<lower=0, upper=1> p;
+    real mu;
+    real home_advantage;
+    array[n_teams-1] real att_raw;
+    array[n_teams-1] real def_raw;
+  }
+  
+  transformed parameters {
+    // Sum-to-zero constraint
+    array[n_teams] real att;
+    array[n_teams] real def;
+  
+    for (t in 1:(n_teams-1)) {
+      att[t] = att_raw[t];
+      def[t] = def_raw[t];
+    }
+  
+    att[n_teams] = -sum(att_raw);
+    def[n_teams] = -sum(def_raw);
+  }
+  ```
+- <u>Model</u>
+  ```{r,eval=F}
+  model {
+    array[n_games] real theta_H;
+    array[n_games] real theta_A;
+    // Priors
+    p ~ uniform(0, 1);
+    att_raw ~ normal(0, 10);
+    def_raw ~ normal(0, 10);
+    home_advantage ~ normal(0, 10);
+    mu ~ normal(0, 10);
+    // Likelihood
+    for (g in 1:n_games) {
+      theta_H[g] = exp(mu + home_advantage +att[home_team[g]] + def[away_team[g]]);
+      theta_A[g] = exp(mu + att[away_team[g]] + def[home_team[g]]);
+      goal_difference[g] ~ zero_inflated_skellam(theta_H[g],theta_A[g],p);
+    }
+  }
+  ```
+- <u>Generated quantities</u>: I couldn't exploit the generated quantities block since `Stan` does not provide any random generator for the Skellam distribution (`skellam_rng()`). Some users by-pass this limitations by generating 2 values from a Poisson (with `poisson_rng()`) and computing their subtraction, but this would be in contrast with our setup, in which we don't assume Poisson marginals. However, the generated quantities can be computed in R even after the model has been fitted! I opted for this latter approach, referring to the `skellam` library without the need of re-inventing the wheel.
+
+**Technical Note:**  the `skellam` library provided a `rskellam()` function, but the documentation specified that it worked internally by generating 2 random Poissons (with `rpois()`), which it the mechanism I wanted to avoid :( Nevertheless, I could easily implement a custom Skellam generator through the *inverse-sampling* method, exploiting the `qskellam()` function from the library, as shown below:
+
+```{r,echo=T,eval=FALSE}
+library(skellam)
+#-------------------------------------------------------------------------------
+# 1) Random generator for standard skellam
+my_rskellam<- function(n,lambda1,lambda2){
+  q= runif(n,min=0,max=1)
+  return(qskellam(q,lambda1,lambda2))
+}
+#-------------------------------------------------------------------------------
+# 2) Random generator for zero-inflated skellam
+my_rzeroinflatedskellam<- function(n,lambda1,lambda2,p){
+  samples<- vector(mode="numeric",length = n)
+  for(i in 1:n){
+    # Generate 0 with probability p
+    # Or a random number from a standard skellam with prob (1-p)
+    if(runif(1)>p){
+      samples[i]<- my_rskellam(1,lambda1,lambda2)
+    }
+    #else not needed, since there are already zeros!
+  }
+  return(samples)
+}
+#-------------------------------------------------------------------------------
+```
+
+## Online model
+
+The stan code for the online model is similar to the previous one, with the major differences in the data block and in the priors definition (model block)
+
+```{r,eval=F}
+data {
+  int<lower=1> n_teams;
+  int<lower=1> n_games;
+  array[n_games] int<lower=1, upper=n_teams> home_team;
+  array[n_games] int<lower=1, upper=n_teams> away_team;
+  array[n_games] int goal_difference;
+  // Previous estimates and sd
+  array[n_teams-1] real prev_att_MAP;
+  array[n_teams-1] real prev_def_MAP;
+  real prev_mu_MAP;
+  real prev_home_advantage_MAP;
+  array[n_teams-1] real<lower=0> prev_att_sd;
+  array[n_teams-1] real<lower=0> prev_def_sd;
+  real<lower=0> prev_mu_sd;
+  real<lower=0> prev_home_advantage_sd;
+}
+
+model {
+  ...
+  // Priors
+  p ~ uniform(0, 1);
+  for(a in 1:(n_teams-1)){
+    att_raw[a] ~ normal(prev_att_MAP[a], prev_att_sd[a]);
+    def_raw[a] ~ normal(prev_def_MAP[a], prev_def_sd[a]);
+  }
+  home_advantage ~ normal(prev_home_advantage_MAP, prev_home_advantage_sd);
+  mu ~ normal(prev_mu_MAP, prev_mu_sd);
+  ...
+}
+```
+
+**Important notes** 
+
+- Due to the extensive time required to fit the models, I am not including the code here (it is not particularly interesting, though). However, I have fitted the models and stored them in a dedicated folder, and they are available in the repository.
+- The bayesian procedure of fitting the model matchday by matchday is, in practice, done on a weekly basis. With access to the complete dataset for the analyzed season, I was able to fit the models in a for loop, iterating over each matchday. The procedure for each iteration is as follows:
+    1. Select the rows of the dataframe corresponding to the available information up to the current matchday.
+    2. Load the model estimated at the end of the previous matchday from the models folder.
+    3. Fit the model and store the updated model in the dedicated folder.
+
+---
+
+# Posterior distributions of the coefficients
+
+After fitting my Bayesian models, I used the `bayesplot` package to generate informative plots of the posterior distributions of the model parameters. To provide a comprehensive overview, I will present the plots for the "final model", which is the one fitted at the end of the season, with all the available data. These plots will be shown for both the offline and online models, with a clear distinction between the attack parameters and the defense parameters.
+
+<u>**Plots for offline models**</u>
+
+```{r}
+load(paste0(OFFLINE_MODELS_DIR,"matchday38/KN_matchday38.rds"))
+posterior=as.array(KN_model)
+#-------------------------------------------------------------------------------
+# Lazy code to retrieve only the parameters of interest
+par_names<-  names(KN_model)
+useful_par_names<- par_names[!(grepl("raw", par_names))]
+att_params <- useful_par_names[grepl("att", useful_par_names)]
+def_params <- useful_par_names[grepl("def", useful_par_names)]
+att_labels <- setNames(teams, paste0("att[", 1:20, "]"))
+def_labels <- setNames(teams, paste0("def[", 1:20, "]"))
+#-------------------------------------------------------------------------------
+```
+
+```{r,warning=F,message=F}
+#-------------------------------------------------------------------------------
+# ATTACK COEFFICIENTS
+color_scheme_set("blue")
+att_intervals_offline<- mcmc_intervals(posterior,pars=att_params)+
+  scale_y_discrete(labels=att_labels)+
+  ggtitle("MCMC intervals for attack coefficients (offline)")
+
+att_areas_offline<- mcmc_areas(posterior,pars= att_params)+
+  scale_y_discrete(labels=att_labels)+
+  ggtitle("MCMC areas for attack coefficients  (offline)")
+
+att_dens_overlay_offline<- mcmc_dens_overlay(posterior,pars=att_params)+
+  ggtitle("Marginal posteriors for attack coefficients by chain  (offline)")
+att_dens_overlay_offline[[1]]$Parameter = rep(att_labels,
+                                             each=N_CHAINS*(N_ITERS-N_WARMUP))
+#-----------------------------------------------------------------------------
+# DEFENSE COEFFICIENTS
+ color_scheme_set("red")
+def_intervals_offline<- mcmc_intervals(posterior,pars=def_params)+
+   scale_y_discrete(labels=def_labels)+
+   ggtitle("MCMC intervals for defense coefficients (offline)")
+ 
+def_areas_offline<- mcmc_areas(posterior,pars= def_params)+
+  scale_y_discrete(labels=def_labels)+
+  ggtitle("MCMC areas for defense coefficients (offline)")
+ 
+def_dens_overlay_offline<- mcmc_dens_overlay(posterior,pars=def_params)+
+  ggtitle("Marginal posteriors for defense coefficients by chain (offline)")
+def_dens_overlay_offline[[1]]$Parameter = rep(def_labels,
+                                             each=N_CHAINS*(N_ITERS-N_WARMUP))
+#-------------------------------------------------------------------------------
+# HOME ADVANTAGE
+home_areas_offline<- mcmc_areas(posterior,pars="home_advantage")+
+  ggtitle("MCMC areas for home advantage (offline)")
+home_dens_overlay_offline<- mcmc_dens_overlay(posterior,pars="home_advantage")+
+  ggtitle("Marginal posteriors for home advantage by chain (offline)")
+```
+
+<u>**Plots for online models**</u>
+
+```{r}
+load(paste0(ONLINE_MODELS_DIR,"matchday38/KN_matchday38.rds"))
+posterior=as.array(KN_model)
+#-------------------------------------------------------------------------------
+# Lazy code to retrieve only the parameters of interest
+par_names<-  names(KN_model)
+useful_par_names<- par_names[!(grepl("raw", par_names))]
+att_params <- useful_par_names[grepl("att", useful_par_names)]
+def_params <- useful_par_names[grepl("def", useful_par_names)]
+att_labels <- setNames(teams, paste0("att[", 1:20, "]"))
+def_labels <- setNames(teams, paste0("def[", 1:20, "]"))
+#-------------------------------------------------------------------------------
+```
+
+```{r,warning=F,message=F}
+#-------------------------------------------------------------------------------
+# ATTACK COEFFICIENTS
+color_scheme_set("blue")
+att_intervals_online<- mcmc_intervals(posterior,pars=att_params)+
+  scale_y_discrete(labels=att_labels)+
+  ggtitle("MCMC intervals for attack coefficients (online)")
+
+att_areas_online<- mcmc_areas(posterior,pars= att_params)+
+  scale_y_discrete(labels=att_labels)+
+  ggtitle("MCMC areas for attack coefficient (online)")
+
+att_dens_overlay_online<- mcmc_dens_overlay(posterior,pars=att_params)+
+  ggtitle("Marginal posteriors for attack coefficients by chain (online)")
+att_dens_overlay_online[[1]]$Parameter = rep(att_labels,
+                                             each=N_CHAINS*(N_ITERS-N_WARMUP))
+#-------------------------------------------------------------------------------
+# DEFENSE COEFFICIENTS
+color_scheme_set("red")
+def_intervals_online<- mcmc_intervals(posterior,pars=def_params)+
+   scale_y_discrete(labels=def_labels)+
+   ggtitle("MCMC intervals for defense coefficients (online)")
+
+def_areas_online<- mcmc_areas(posterior,pars= def_params)+
+  scale_y_discrete(labels=def_labels)+
+  ggtitle("MCMC areas for defense coefficients (online)")
+# 
+def_dens_overlay_online<- mcmc_dens_overlay(posterior,pars=def_params)+
+  ggtitle("Marginal posteriors for defense coefficients by chain (online)")
+def_dens_overlay_online[[1]]$Parameter = rep(def_labels,
+                                             each=N_CHAINS*(N_ITERS-N_WARMUP))
+#-------------------------------------------------------------------------------
+# HOME ADVANTAGE
+home_areas_online<- mcmc_areas(posterior,pars="home_advantage")+
+  ggtitle("MCMC areas for home advantage (online)")
+home_dens_overlay_online<- mcmc_dens_overlay(posterior,pars="home_advantage")+
+  ggtitle("Marginal posteriors for home advantage by chain (online)")
+```
+
+### MCMC Intervals plots
+
+```{r,fig.align='center',dpi=350,warning=F,message=F,echo=F,fig.width=14,fig.height=8}
+att_intervals_offline | att_intervals_online
+def_intervals_offline | def_intervals_online
+```
+
+### MCMC Areas plots
+
+```{r,fig.align='center',dpi=350,warning=F,message=F,echo=F,fig.width=14,fig.height=8}
+att_areas_offline | att_areas_online
+def_areas_offline | def_areas_online
+```
+
+### Marginal posteriors (by chain)
+
+```{r,dpi=200,warning=F,message=F,echo=F,,fig.width=16,fig.height=6}
+att_dens_overlay_offline+theme(legend.position = "none") | att_dens_overlay_online+theme(legend.position = "none")
+def_dens_overlay_offline+theme(legend.position = "none") | def_dens_overlay_online+theme(legend.position = "none")
+```
+
+### Home advantage
+
+```{r,fig.align='center',dpi=200,warning=F,message=F,echo=F,fig.width=10,fig.height=3}
+home_areas_offline | home_dens_overlay_offline
+home_areas_online | home_dens_overlay_online
+```
+
+### Teams comparison
+
+```{r,echo=F,dpi=200,warning=F,message=F,echo=F,fig.width=8,fig.height=5}
+scatterplot_df <- data.frame(
+  "Team" = teams,
+  "Att" = NA,
+  "Def" = NA,
+  "Logo" = NA
+)
+
+scatterplot_df$Logo <- c(
+  "https://upload.wikimedia.org/wikipedia/commons/0/05/FC_Internazionale_Milano_2021.svg",
+  "https://upload.wikimedia.org/wikipedia/en/9/92/Hellas_Verona_FC_logo_%282020%29.svg",
+  "https://upload.wikimedia.org/wikipedia/en/e/e9/Empoli_F.C._logo_%282021%29.png",
+  "https://upload.wikimedia.org/wikipedia/en/2/2e/Torino_FC_Logo.svg",
+  "https://upload.wikimedia.org/wikipedia/commons/5/5b/Bologna_F.C._1909_logo.svg",
+  "https://upload.wikimedia.org/wikipedia/en/c/ce/Udinese_Calcio_logo.svg",
+  "https://upload.wikimedia.org/wikipedia/commons/2/2d/SSC_Neapel.svg",
+  "https://upload.wikimedia.org/wikipedia/en/f/f7/AS_Roma_logo_%282017%29.svg",
+  "https://upload.wikimedia.org/wikipedia/en/6/61/Cagliari_Calcio_1920.svg",
+  "https://upload.wikimedia.org/wikipedia/en/d/d2/U.C._Sampdoria_logo.svg",
+  "https://upload.wikimedia.org/wikipedia/en/6/66/AtalantaBC.svg",
+  "https://upload.wikimedia.org/wikipedia/en/c/ce/S.S._Lazio_badge.svg",
+  "https://upload.wikimedia.org/wikipedia/commons/f/f2/2022_ACF_Fiorentina_logo.svg",
+  "https://upload.wikimedia.org/wikipedia/commons/b/bc/Juventus_FC_2017_icon_%28black%29.svg",
+  "https://upload.wikimedia.org/wikipedia/en/2/25/Genoa_C.F.C._logo.png",
+  "https://upload.wikimedia.org/wikipedia/en/1/1c/US_Sassuolo_Calcio_logo.svg",
+  "https://upload.wikimedia.org/wikipedia/commons/d/d0/Logo_of_AC_Milan.svg",
+  "https://upload.wikimedia.org/wikipedia/en/8/85/US_Salernitana_1919_logo.svg",
+  "https://upload.wikimedia.org/wikipedia/it/c/cf/Spezia_Calcio_logo_2023.svg",
+  "https://upload.wikimedia.org/wikipedia/commons/7/74/2022_Venezia_FC_logo.svg"
+  # "https://upload.wikimedia.org/wikipedia/en/0/0b/Frosinone_Calcio_logo.svg",
+  # "https://upload.wikimedia.org/wikipedia/en/8/85/Us_lecce.svg",
+  # "https://upload.wikimedia.org/wikipedia/en/a/a7/AC_Monza_logo_%282021%29.svg",
+  )
+  
+  
+
+# Calculate mean values for Att and Def
+for (t in 1:length(teams)) {
+  scatterplot_df$Att[t] <- mean(posterior[,,paste0("att[",t,"]")])
+  scatterplot_df$Def[t] <- -mean(posterior[,,paste0("def[",t,"]")])
+}
+
+# Plot
+ggplot(scatterplot_df,aes(Att, Def)) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey35") +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "grey35") +
+  geom_image(aes(image = Logo), size = 0.06) + 
+  ylim(-1,1.5)+
+  labs(x= "Attack strength",
+       y= "Defense strength",
+       title = paste0("Teams's attack and defense abilities after matchday",
+                      n_matchdays," (Serie A ",SEASON,")"))+
+  theme_linedraw()+
+  theme(axis.title.x = element_text(size=12, face="bold", colour = "black"),
+        axis.text.x = element_text(size=10, face="bold", colour = "black"),
+        axis.title.y = element_text(size=12, face="bold", colour = "black"), 
+        axis.text.y = element_text(size=10, face="bold", colour = "black"),
+        plot.title = element_text(hjust = 0.5,face = "bold")
+        )
+```
+
+### Abilities over time
+
+<u>Teams's abilities over time (offline model)</u>
+
+```{r,echo=F,dpi=200,warning=F,message=F,echo=F,fig.width=20,fig.height=15}
+# Coefficients time series
+offline_ts_df<- get_all_teams_data(teams_list=teams,start=19,end=38,models_dir_path =OFFLINE_MODELS_DIR)
+
+offline_plot_list <- list()
+offline_plot_list <- lapply(teams, function(t) {
+  plot_parameters_ts(team = t,complete_df = offline_ts_df,start = 19,end = 38)
+  }
+)
+
+(offline_plot_list[[1]] | offline_plot_list[[2]] |offline_plot_list[[3]] | offline_plot_list[[4]]) /
+  (offline_plot_list[[5]] | offline_plot_list[[6]] |offline_plot_list[[7]] | offline_plot_list[[8]]) /
+  (offline_plot_list[[9]] | offline_plot_list[[10]] |offline_plot_list[[11]] | offline_plot_list[[12]]) /
+  (offline_plot_list[[13]] | offline_plot_list[[14]] |offline_plot_list[[15]] | offline_plot_list[[16]]) /
+  (offline_plot_list[[17]] | offline_plot_list[[18]] |offline_plot_list[[19]] | offline_plot_list[[20]])
+```
+
+<u>Teams's abilities over time (online model)</u>
+
+```{r,echo=F,dpi=200,warning=F,message=F,echo=F,fig.width=20,fig.height=15}
+online_ts_df<- get_all_teams_data(teams_list=teams,start=19,end=38,models_dir_path =ONLINE_MODELS_DIR)
+
+online_plot_list <- list()
+online_plot_list <- lapply(teams, function(t) {
+  plot_parameters_ts(team = t,complete_df = online_ts_df,start = 19,end = 38)
+}
+)
+
+(online_plot_list[[1]] | online_plot_list[[2]] |online_plot_list[[3]] | online_plot_list[[4]]) /
+  (online_plot_list[[5]] | online_plot_list[[6]] |online_plot_list[[7]] | online_plot_list[[8]]) /
+  (online_plot_list[[9]] | online_plot_list[[10]] |online_plot_list[[11]] | online_plot_list[[12]]) /
+  (online_plot_list[[13]] | online_plot_list[[14]] |online_plot_list[[15]] | online_plot_list[[16]]) /
+  (online_plot_list[[17]] | online_plot_list[[18]] |online_plot_list[[19]] | online_plot_list[[20]])
+```
+
+
+
+---
+
+# A glimpse to convergence diagnostics
+
+The training phase of the models seemed promising, as the MCMC procedure completed without any warnings or errors. To assess the convergence of the chains, we can inspect the summary of the models and look at the Gelman-Rubin statistics $\hat{R}$ (*Rhat*), which provide a quantitative measure of the chains' convergence to the steady state.
+
+<u>Offline model</u>
+```{r,echo=F}
+load(paste0(OFFLINE_MODELS_DIR,"matchday38/KN_matchday38.rds"))
+posterior=as.array(KN_model)
+print(KN_model,pars=c("mu","home_advantage",att_params,def_params))
+```
+
+<u>Online model</u>
+```{r,echo=F}
+load(paste0(ONLINE_MODELS_DIR,"matchday38/KN_matchday38.rds"))
+posterior=as.array(KN_model)
+print(KN_model,pars=c("mu","home_advantage",att_params,def_params))
+```
+
+In the summary, all *Rhat* values are equal to 1, indicating convergence of the chains (remember the rule of thumb, $\hat{R}< 1.1$). Additionally, the effective sample size (n_eff) values are high, which is a positive indicator. Notably, the n_eff values for the online model are generally higher than those for the offline models, which was something that I somehow expected. Interestingly, many n_eff values (all, actually, for the online model) are greater than the total number of samples set during the fitting process. At first, this seemed paradoxical to me. However, after reading various discussions on the Stan developers forum, I found the following answer:*"Hi! It means that the draws that Stan is producing are better than independent draws for those parameters. Sounds like a joke, but apparently Stan is actually that awesome. :)"*. (I leave the link to the discussion [here](https://discourse.mc-stan.org/t/n-eff-greater-than-number-of-iterations/7114))
+
+Thanks to the `bayesplot` package, we can also plot the traceplots to visually inspect for divergent transitions. In our case, no chains had diverged, so the plots are not particularly interesting. However, if there had been any divergent chains, they would be evident in these plots. As an example, I present the traceplots for the attack and defense coefficients from the online model:
+
+```{r,echo=F,dpi=200,warning=T,message=T,echo=F,fig.width=20,fig.height=15}
+color_scheme_set("blue")
+att_traceplot<-mcmc_trace(
+  as.array(KN_model,pars = att_params),
+  np = nuts_params(KN_model)
+)
+att_traceplot[[1]]$parameter<- rep(att_labels,each=N_CHAINS*(N_ITERS-N_WARMUP))
+color_scheme_set("red")
+def_traceplot<-mcmc_trace(
+  as.array(KN_model,pars = def_params),
+  np = nuts_params(KN_model)
+)
+def_traceplot[[1]]$parameter<- rep(def_labels,each=N_CHAINS*(N_ITERS-N_WARMUP))
+```
+
+```{r,echo=F,dpi=200,warning=T,message=T,echo=F,fig.width=20,fig.height=10}
+att_traceplot
+```
+
+```{r,echo=F,dpi=200,warning=T,message=T,echo=F,fig.width=20,fig.height=10}
+def_traceplot
+```
+
+
+After examining the Gelman-Rubin statistic and the effective sample size, another important diagnostic for assessing convergence is the autocorrelation function (ACF) plot. This plot helps to inspect the autocorrelations within the chain samples. Upon reviewing all the ACF plots, I did not observe any particularly concerning patterns. To provide a comprehensive overview, I will present ACF plots just for two parameters: one with greater variability (the defense coefficient for Venezia FC) and one with less variability (the attack coefficient for Inter). These examples illustrate that regardless of the variability, there are no significant autocorrelation patterns, indicating good convergence properties of the model
+
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+color_scheme_set("blue")
+acf_att_inter<- mcmc_acf(KN_model,pars = c("att[1]"),lags = 30)
+acf_att_inter<- acf_att_inter+scale_x_continuous(breaks = seq(0, max(ggplot_build(acf_att_inter)$layout$panel_params[[1]]$x.range), by = 1))
+acf_att_inter[[1]]$Parameter="Inter attack ACF (for each chain)"
+color_scheme_set("red")
+acf_def_venezia<- mcmc_acf(KN_model,pars = c("def[20]"),lags = 30)
+acf_def_venezia<- acf_def_venezia+scale_x_continuous(breaks = seq(0, max(ggplot_build(acf_def_venezia)$layout$panel_params[[1]]$x.range), by = 1))
+acf_def_venezia[[1]]$Parameter="Venezia FC defense ACF (for each chain)"
+```
+
+```{r,echo=FALSE,fig.align='center',dpi=200,fig.height=6,fig.width=12}
+acf_att_inter | acf_def_venezia
+```
+
+---
+
+# Model checking and comparison
+
+So far we have constructed a Bayesian model, computed the posterior distribution of all estimates, and conducted diagnostic tests —both quantitative and qualitative— regarding the convergence of the chains. Now, our attention turns towards evaluating the fit of the model to the data and our substantive knowledge.
+
+## Posterior predictive checks (in-sample replications)
+
+As illustrated in the *Bayesian Data Analysis* book, a key technique for assessing model fit involves drawing simulated values from the posterior predictive distribution and comparing them to the observed data. More specifically, we'll perform now an <u>in-sample</u> replication analysis. Here, we aim to assess whether the model adequately captures the observed data by assessing the plausibility of the observed data under the posterior predictive distribution. If the model is well-fitted, replicated data generated under its framework should closely resemble the observed data, while any discrepancy between the replicated and observed data may indicate model misfit or chance variations. If the model fits, then replicated data generated under the model should look similar to observed data. In summary, the observed data should look plausible under the posterior predictive distribution.
+
+The analysis of model checking can be effectively conducted in a graphical/qualitative manner. Fortunately, our friend `bayesplot` offers a suite of graphical solutions to assess the posterior predictive distribution for our in-sample analysis. Before delving into the graphical model checking plots, a preliminary step is required. Due to limitations in defining the generated quantities block in Stan, as discussed earlier, it was necessary to simulate these quantities in R.
+
+**Note**: In conducting the in-sample replication procedure, we assess the plausibility of observed data relative to replications drawn from the model trained with such data. While it is possible to perform this check match day by match day, I opted to utilize our more comprehensive model—the one estimated after the final match of the season. By employing this approach, the observed results encompass the entirety of the season's data, providing a robust assessment of model fit across the entire dataset.
+
+<u>**PPC for offline models**</u>
+
+```{r,eval=FALSE}
+#-------------------------------------------------------------------------------
+# Dataframe were to store the simulated GD
+GD_df<- data.frame(matrix(NA,nrow = N_CHAINS*(N_ITERS-N_WARMUP),ncol=n_games))
+# Load the final model (end of season)
+load(paste0(OFFLINE_MODELS_DIR,"matchday",n_matchdays,
+            "/KN_matchday",n_matchdays,".rds"))
+#-------------------------------------------------------------------------------
+# Retrieve some "global" parameters
+posterior<- as.array(KN_model)
+mu = posterior[,,"mu"]
+home=posterior[,,"home_advantage"]
+p = posterior[,,"p"]
+#-------------------------------------------------------------------------------
+for (m in 1:n_games){
+  cat(m,"\n")
+  ht=SerieA_data$ht[m]
+  at=SerieA_data$at[m]
+  attH=posterior[,,paste0("att[",ht,"]")]
+  defH=posterior[,,paste0("def[",ht,"]")]
+  attA=posterior[,,paste0("att[",at,"]")]
+  defA=posterior[,,paste0("def[",at,"]")]
+  
+  theta_H = exp(mu+home+attH+defA)
+  theta_A = exp(mu+attA+defH)
+  
+  GD<- mapply(my_rzeroinflatedskellam, 1,theta_H, theta_A,p)
+  
+  GD_df[,m]<- GD
+  colnames(GD_df)[m]<-paste0(teams[ht],"-vs-",teams[at])
+}
+#-------------------------------------------------------------------------------
+```
+
+```{r,echo=FALSE,eval=TRUE}
+GD_df<- read.csv("GD_df_offline.csv",header = TRUE)
+```
+
+
+```{r}
+color_scheme_set("teal")
+
+ppc_dens_overlay_offline <- ppc_dens_overlay(y=SerieA_data$GD,
+                                             yrep=as.matrix(GD_df[1:4000,]))
+
+ppc_ecdf_overlay_offline <- ppc_ecdf_overlay(y=SerieA_data$GD,
+                                             yrep=as.matrix(GD_df[1:10000,]))
+
+ppc_stat_mean_offline<- ppc_stat(y = SerieA_data$GD,
+                                 yrep=,as.matrix(GD_df[1:40000,]),
+                                 stat = "mean",bins = 20)
+
+propzero <- function(x) mean(x == 0)
+ppc_stat_propzero_offline <- ppc_stat(y = SerieA_data$GD,
+                                      yrep=as.matrix(GD_df[1:40000,]),
+                                      stat = "propzero",bins = 20)
+
+ppc_stat_2d_offline <- ppc_stat_2d(y = SerieA_data$GD,
+                                   yrep=as.matrix(GD_df[1:40000,]),
+                                   stat = c("mean","sd"))
+```
+
+
+<u>**PPC for online models**</u>
+
+```{r,eval=FALSE}
+#-------------------------------------------------------------------------------
+# Dataframe were to store the simulated GD
+GD_df<- data.frame(matrix(NA,nrow = N_CHAINS*(N_ITERS-N_WARMUP),ncol=n_games))
+# Load the final model (end of season)
+load(paste0(ONLINE_MODELS_DIR,"matchday",n_matchdays,
+            "/KN_matchday",n_matchdays,".rds"))
+#-------------------------------------------------------------------------------
+# Retrieve some "global" parameters
+posterior<- as.array(KN_model)
+mu = posterior[,,"mu"]
+home=posterior[,,"home_advantage"]
+p = posterior[,,"p"]
+#-------------------------------------------------------------------------------
+for (m in 1:n_games){
+  
+  ht=SerieA_data$ht[m]
+  at=SerieA_data$at[m]
+  attH=posterior[,,paste0("att[",ht,"]")]
+  defH=posterior[,,paste0("def[",ht,"]")]
+  attA=posterior[,,paste0("att[",at,"]")]
+  defA=posterior[,,paste0("def[",at,"]")]
+  
+  theta_H = exp(mu+home+attH+defA)
+  theta_A = exp(mu+attA+defH)
+  
+  GD<- mapply(my_rzeroinflatedskellam, 1,theta_H, theta_A,p)
+  
+  GD_df[,m]<- GD
+  colnames(GD_df)[m]<-paste0(teams[ht],"-vs-",teams[at])
+}
+#-------------------------------------------------------------------------------
+```
+
+```{r,echo=FALSE,eval=TRUE}
+GD_df<- read.csv("GD_df_online.csv",header = TRUE)
+```
+
+
+```{r}
+color_scheme_set("purple")
+
+ppc_dens_overlay_online <- ppc_dens_overlay(y=SerieA_data$GD,
+                                            yrep=as.matrix(GD_df[1:4000,]))
+
+ppc_ecdf_overlay_online<- ppc_ecdf_overlay(y=SerieA_data$GD,
+                                           yrep=as.matrix(GD_df[1:10000,]))
+
+ppc_stat_mean_online<- ppc_stat(y = SerieA_data$GD,
+                                yrep=,as.matrix(GD_df[1:40000,]),
+                                stat = "mean",bins = 20)
+
+propzero <- function(x) mean(x == 0)
+ppc_stat_propzero_online <- ppc_stat(y = SerieA_data$GD,
+                                     yrep=as.matrix(GD_df[1:40000,]),
+                                     stat = "propzero",bins = 20)
+
+ppc_stat_2d_online <- ppc_stat_2d(y = SerieA_data$GD,
+                                  yrep=as.matrix(GD_df[1:40000,]),
+                                  stat = c("mean","sd"))
+```
+
+
+```{r,fig.align='center',dpi=250,warning=F,message=F,echo=F,fig.width=14,fig.height=6}
+ppc_dens_overlay_offline | ppc_dens_overlay_online
+
+ppc_ecdf_overlay_offline | ppc_ecdf_overlay_online
+
+ppc_stat_mean_offline | ppc_stat_mean_online
+
+ppc_stat_propzero_offline | ppc_stat_propzero_online
+
+ppc_stat_2d_offline | ppc_stat_2d_online
+```
+
+---
+
+## Posterior predictive checks (out-sample replications)
+
+Qui ho fatto una cosa diversa da quelle dei libri....posso fare previsioni out of sample per ogni giornata (col modello precedente)...infatti ho usato questo per simulare i rankings e anche per ottenere delle matrici di confusione (e in realta anche brier score)
+
+# Conclusions and further developments
