@@ -32,12 +32,12 @@ data {
   array[n_games] int<lower=1, upper=n_teams> away_team;
   array[n_games] int goal_difference;
   // Previous estimates and sd
-  array[n_teams] real prev_att_means;
-  array[n_teams] real prev_def_means;
-  real prev_mu_mean;
-  real prev_home_advantage_mean;
-  array[n_teams] real<lower=0> prev_att_sd;
-  array[n_teams] real<lower=0> prev_def_sd;
+  array[n_teams-1] real prev_att_MAP;
+  array[n_teams-1] real prev_def_MAP;
+  real prev_mu_MAP;
+  real prev_home_advantage_MAP;
+  array[n_teams-1] real<lower=0> prev_att_sd;
+  array[n_teams-1] real<lower=0> prev_def_sd;
   real<lower=0> prev_mu_sd;
   real<lower=0> prev_home_advantage_sd;
 }
@@ -70,11 +70,11 @@ model {
   // Priors
   p ~ uniform(0, 1);
   for(a in 1:(n_teams-1)){
-    att_raw[a] ~ normal(prev_att_means[a], prev_att_sd[a]);
-    def_raw[a] ~ normal(prev_def_means[a], prev_def_sd[a]);
+    att_raw[a] ~ normal(prev_att_MAP[a], prev_att_sd[a]);
+    def_raw[a] ~ normal(prev_def_MAP[a], prev_def_sd[a]);
   }
-  home_advantage ~ normal(prev_home_advantage_mean, prev_home_advantage_sd);
-  mu ~ normal(prev_mu_mean, prev_mu_sd);
+  home_advantage ~ normal(prev_home_advantage_MAP, prev_home_advantage_sd);
+  mu ~ normal(prev_mu_MAP, prev_mu_sd);
   // Likelihood
   for (g in 1:n_games) {
     theta_H[g] = exp(mu + home_advantage +att[home_team[g]] + def[away_team[g]]);
