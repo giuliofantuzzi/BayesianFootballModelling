@@ -17,7 +17,7 @@ N_WARMUP=1000
 DATA_DIR= "data/"
 STAN_DIR= "stan/"
 SEASON="2122"
-MODELS_DIR= paste0("estimated_models/season_",SEASON,"/online_models/")
+ONLINE_MODELS_DIR= paste0("estimated_models/season_",SEASON,"/online_models/")
 MATCHDAY_TO_PREDICT=38
 #-------------------------------------------------------------------------------
 # Prepare the test-set (the unknown matchday 36)
@@ -41,7 +41,7 @@ at= unlist(sapply(1:nrow(test_set),function (g) which(teams==test_set$AwayTeam[g
 #-------------------------------------------------------------------------------
 
 # Load the model trained up to the prev matchday
-load(file = paste0(MODELS_DIR,"matchday",MATCHDAY_TO_PREDICT-1,"/KN_matchday",MATCHDAY_TO_PREDICT-1,".rds"))
+load(file = paste0(ONLINE_MODELS_DIR,"matchday",MATCHDAY_TO_PREDICT-1,"/KN_matchday",MATCHDAY_TO_PREDICT-1,".rds"))
 
 posterior<- as.array(KN_model)
 mu = posterior[,,"mu"]

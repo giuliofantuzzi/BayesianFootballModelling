@@ -17,7 +17,7 @@ DATA_DIR= "data/"
 STAN_DIR= "stan/"
 SEASON="2122"
 ONLINE_MODELS_DIR= paste0("estimated_models/season_",SEASON,"/online_models/")
-MODELS_DIR= paste0("estimated_models/season_",SEASON,"/models/")
+MODELS_DIR= paste0("estimated_models/season_",SEASON,"/offline_models/")
 #-------------------------------------------------------------------------------
 # Data import and preparation
 #-------------------------------------------------------------------------------

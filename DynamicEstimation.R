@@ -19,7 +19,7 @@ N_WARMUP=1000
 DATA_DIR= "data/"
 STAN_DIR= "stan/"
 SEASON="2122"
-MODELS_DIR= paste0("estimated_models/season_",SEASON,"/models/")
+OFFLINE_OFFLINE_MODELS_DIR= paste0("estimated_models/season_",SEASON,"/offline_models/")
 #-------------------------------------------------------------------------------
 # Data import and preparation
 #-------------------------------------------------------------------------------
@@ -35,16 +35,17 @@ teams<- str_replace_all(teams, " ", "")
 #-------------------------------------------------------------------------------
 # Estimation of the models over time
 #-------------------------------------------------------------------------------
-if(!file.exists(MODELS_DIR)){
-  dir.create(MODELS_DIR,recursive = T)
+if(!file.exists(OFFLINE_OFFLINE_MODELS_DIR)){
+  dir.create(OFFLINE_OFFLINE_MODELS_DIR,recursive = T)
 }
 
 for(m in 19:n_matchdays){
   cat("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n")
-  cat("Parameters estimation after matchday n.",i,"...\n")
+  cat("Parameters estimation after matchday n.",m,"...\n")
   cat("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n")
   #---------------------------------------------------------------------------
   # (1) Training and test set for the current matchday
+  cat("...Preparing the training set...\n")
   training<- SerieA_data[1:(10*m),c("HomeTeam","AwayTeam","FTHG","FTAG")]
   training<- na.omit(training)
   # (2) Prepare the parameters for stan
@@ -56,6 +57,7 @@ for(m in 19:n_matchdays){
     goal_difference = SerieA_data$FTHG[1:nrow(training)]-SerieA_data$FTAG[1:nrow(training)]
   )
   # (3) Fit the model
+  cat("...Fitting the model...\n")
   KN_model <- stan(file = paste0(STAN_DIR,"karlis-ntzoufras.stan"),
                    data = stan_paramters,
                    chains = N_CHAINS,
@@ -64,6 +66,6 @@ for(m in 19:n_matchdays){
                    seed = 16
   )
   # (4) Save the model
-  dir.create(paste0(MODELS_DIR,"matchday",m))
-  save(KN_model,file=paste0(MODELS_DIR,"matchday",m,"/KN_matchday",m,".rds"))
+  dir.create(paste0(OFFLINE_OFFLINE_MODELS_DIR,"matchday",m))
+  save(KN_model,file=paste0(OFFLINE_OFFLINE_MODELS_DIR,"matchday",m,"/KN_matchday",m,".rds"))
 }
