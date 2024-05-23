@@ -20,7 +20,7 @@ DATA_DIR= "data/"
 STAN_DIR= "stan/"
 SEASON="2122"
 ONLINE_MODELS_DIR= paste0("estimated_models/season_",SEASON,"/online_models/")
-OFFLINE_MODELS_DIR= paste0("estimated_models/season_",SEASON,"/models/")
+OFFLINE_MODELS_DIR= paste0("estimated_models/season_",SEASON,"/offline_models/")
 
 #-------------------------------------------------------------------------------
 # Data import and preparation
@@ -175,7 +175,7 @@ online_ts_df<- get_all_teams_data(teams_list=teams,start=19,end=38,models_dir_pa
 
 online_plot_list <- list()
 online_plot_list <- lapply(teams, function(t) {
-  plot_parameters_ts(team = t,complete_df = ts_df,start = 19,end = 38)
+  plot_parameters_ts(team = t,complete_df = online_ts_df,start = 19,end = 38)
 }
 )
 
