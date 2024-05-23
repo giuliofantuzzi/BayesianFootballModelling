@@ -92,6 +92,21 @@ dens_overlay_def[[1]]$Parameter = rep(def_labels,each=N_CHAINS*(N_ITERS-N_WARMUP
 dens_overlay_def
 
 
+# Convergence-diagnostic (example)
+color_scheme_set("green")
+parcoord_with_divs <- mcmc_parcoord(
+  as.array(KN_model, pars =att_params),
+  np = nuts_params(KN_model)
+)
+parcoord_with_divs
+
+att_traceplot<-mcmc_trace(
+  as.array(KN_model,pars = att_params),
+  np = nuts_params(KN_model)
+)
+att_traceplot
+
+
 # Plots with logos
 
 # Create scatterplot_df dataframe
