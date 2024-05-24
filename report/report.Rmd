@@ -31,28 +31,92 @@ output:
 
 Predicting football match outcomes has long intrigued statisticians and sports analysts. The inherently random nature of sports events, coupled with various influencing factors like team strength, players performance, and home advantage, presents a challenging yet fascinating problem for statistical modeling.
 
-In previous projects, I have explored goal-based models such as those proposed by *Maher* and *Dixon and Coles*. *Maher*'s model describes the outcome of a match by modeling the goals of the two teams independently using Poisson distributions. *Dixon and Coles* enhanced this basic model by introducing correlation between the teams' goal-scoring processes and accounting for the home advantage effect. While these models have been widely used due to their simplicity and effectiveness, they rely on the assumption that goals follow a Poisson distribution. This assumption, however, can be questionable in certain leagues where overdispersion—where the sample variance exceeds the sample mean— has been observed in the number of goals.
+In previous projects, I have explored goal-based models such as those proposed by *Maher* and *Dixon and Coles*. Maher's model describes the outcome of a match by modeling the goals of the two teams independently using Poisson distributions. Dixon and Coles enhanced this basic model by introducing correlation between the teams' goal-scoring processes and accounting for the home advantage effect. While these models have been widely used due to their simplicity and effectiveness, they rely on the assumption that goals follow a Poisson distribution. This assumption, however, can be questionable in certain leagues where overdispersion —in which the sample variance exceeds the sample mean— has been observed in the number of goals.
 
-To address this limitation, *Karlis and Ntzoufras* proposed an alternative approach by <u>focusing on the goal difference rather than the individual goal counts of each team</u>. Their method utilizes the Skellam distribution, which models the difference between two independent Poisson-distributed random variables. This shift in focus eliminates the need to account for the correlation between teams' scores directly and avoids the assumption of Poisson marginals. Although the Skellam-based model cannot predict exact match scores, it offers valuable insights into the likely goal difference, thereby simplifying the complexity associated with modeling individual goal counts. The application of Bayesian methods in this context allows for the incorporation of prior knowledge and continuous updating of model parameters as new data becomes available, enhancing the predictive power and adaptability of the model.
+To address this limitation, *Karlis and Ntzoufras* proposed an alternative approach by <u>focusing on the goal difference rather than the individual goal counts of each team</u>. Their method utilizes the **Skellam distribution**, which eliminates the need to account for the correlation between teams' scores directly and avoids the assumption of Poisson marginals. Although the Skellam-based model cannot predict exact match scores, it offers valuable insights into the likely goal difference, thereby simplifying the complexity associated with modeling individual goal counts. The application of Bayesian methods in this context allows for the incorporation of prior knowledge and continuous updating of model parameters as new data becomes available, enhancing the predictive power and adaptability of the model.
 
 ---
 
 # Project structure
 
-Spiegare la struttura, dire che mi sono focalizzato su serie A 2021-22 e che ho usato Stan
-**TO-BE-DONE**
 ```
-📂 project/
+📂 BayesianExam/
 │ 
-├── 📂 stan/
+├── 📂 data/
+│   └──  📂 season_2122/
+│         ├── 📊 Bundesliga1_2122.csv
+│         ├── 📊 Bundesliga2_2122.csv
+│         ├── 📊 Championship_2122.csv
+│         ├── 📊 LaLiga1_2122.csv
+│         ├── 📊 LaLiga2_2122.csv
+│         ├── 📊 Ligue1_2122.csv
+│         ├── 📊 Ligue2_2122.csv
+│         ├── 📊 PremierLeague_2122.csv
+│         ├── 📊 SerieA_2122.csv
+│         └── 📊 SerieB_2122.csv         
 │ 
-├── 📂 data/ 
-│   ├── 📄 ...
-│   └── 📄 ...
-...
+├── 📂 estimated_models/ 
+│   └──  📂 season_2122/
+│        ├── 📂 offline_models/
+│        │   ├── 📂 matchday19/
+|        |   ├── ...
+│        │   └── 📂 matchday38/
+│        │
+│        └── 📂 online_models/
+│            ├── 📂 matchday19/
+|            ├── ...
+│            └── 📂 matchday38/
+│
+├── 📂 report/ 
+│
+├── 📂 stan/ 
+|   ├── ⚙️ karlis-ntzoufras.stan
+│   └── ⚙️️️ online.stan
+|
+├── 📂 utils/ 
+|   ├── HDA_probabilities.R
+|   ├── final_pts_distribution.R
+|   ├── get_all_teams_data.R
+|   ├── plot_confusionmatrix.R
+|   └── plot_parameters_ts.R
+|
+├── 📂 web-scraping/ 
+│   └── 🔍 scraper.py
+|
+├── BrierScore.R
+├── ConfusionMatrix.R
+├── DataAnalysis.R
+├── DynamicEstimation.R
+├── ExploratoryDataAnalysis.R
+├── FinalRankingSimulation.R
+├── ModelChecking.R
+├── OnlineLearning.R
+└── Predictions.R
 ```
 
-```{r,echo=TRUE,warning=FALSE,message=FALSE}
+This report presents the findings of a comprehensive analysis of <u>Serie A football league data for the 2021-2022 season</u>. Given the inherent complexity of the analysis at hand, my project is structured into several directories, each serving a specific purpose in the data collection, analysis, and modeling process.
+
+1. `data/` is organised in subfolders for specific seasons, containing the raw data collected from [football-data.co.uk](www.football-data.co.uk). 
+
+2. `web-scraping/` contains a python web scraper (`scraper.py`) to automatically retrieve and download datasets for all major European teams. By executing the scraper from the terminal and providing the desired season, users can download datasets for analysis. Example of usage:
+    ```{r,eval=F}
+    python3 scraper.py <season> #e.g 2122
+    ```
+
+
+3. `stan/` contains the Stan models used for statistical modeling. Two models are included:
+    - `karlis-ntzoufras.stan`: the standard version proposed by the authors. From now on in the report, we will refer to it as the "offline" model;
+    - `online.stan`: the online-learning framework version of the model.
+    
+4. `utils/` simply contains some custom helper functions utilized throughout the analysis process
+
+5. `report/` contains the final report file, where the results of the analysis are documented and presented.
+
+6. `estimated_models/` contains the fitted models as `.rds` files. Like the `data/` directory, it is organized in season-specific subfolders. Since I wanted to store the "offline" models separately from the "online" ones, I further increase the depth of my subfolders, and I also stored the models by matchday (I hope it will be intuitive)
+
+In addition to these directories, various `R` scripts are available, each corresponding to different stages of the analysis pipeline. These scripts facilitate data cleaning, exploration, modeling, and visualization, contributing to a structured and reproducible workflow. The following sections detail the methodology employed, the results obtained from statistical modeling, and insights derived from the analysis of Serie A 2021-2022 data.
+
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
 library(ggplot2)
 library(ggimage)
 library(patchwork)
@@ -67,8 +131,6 @@ source("../utils/my_skellam.R")
 source("../utils/get_all_teams_data.R")
 source("../utils/plot_parameters_ts.R")
 source("../utils/plot_confusionmatrix.R")
-
-
 N_CHAINS=4
 N_ITERS=11000
 N_WARMUP=1000
@@ -83,9 +145,9 @@ ONLINE_MODELS_DIR= paste0("../estimated_models/season_",SEASON,"/online_models/"
 
 # Exploratory Data Analysis
 
-Before delving into model construction, it is crucial to gain a comprehensive understanding of the data. The exploratory data analysis (EDA) phase, through its visualizations, provide a glimpse into the underlying dynamics but also inform the modeling approach by highlighting factors that influence match outcomes. By analyzing various aspects of the data, such as goal differences, result distribution, and team performance, we are going to lay the groundwork for developing the models.
+Before delving into model construction, it is crucial to gain a comprehensive understanding of the data. The exploratory data analysis (EDA) phase, through its visualizations, provide a glimpse into the underlying dynamics but also inform the modeling approach by highlighting factors that influence match outcomes. By analyzing various aspects of the data, such as goal differences, result distribution, and team performance, we are going to lay the groundwork for developing our models.
 
-
+Data import and cleaning:
 
 ```{r}
 SerieA_data<- read.csv(file= paste0(DATA_DIR,"season_",SEASON,"/SerieA_",SEASON,".csv"))
@@ -103,7 +165,7 @@ teams<- str_replace_all(teams, " ", "")
 ```
 
 
-The initial variable I decided to inspect was, of course, the goal differences, as it represents our phenomenon of interest. The plot below shows the empirical data and overlays it with theoretical Skellam distributions (both the standard and the zero-inflated version),  and highlights how well the theoretical distributions align with the observed data.
+The initial variable I decided to inspect was, of course, the goal differences, as it represents our main phenomenon of interest. The plot below shows the empirical data and overlays it with theoretical Skellam distributions (both the standard and a zero-inflated version), and highlights how well the theoretical distributions align with the observed data.
 
 ```{r,echo=FALSE,fig.align='center',dpi=200,fig.width=8, fig.height=5}
 GD=SerieA_data$GD
@@ -143,7 +205,7 @@ SerieA_data %>%
   )
 ```
 
-Another interesing aspect to explore are the goal statistics by team. In particular, by examining goals scored and conceded by each team, we gain valuable insights into the potential ranking of attack and defense coefficients in our upcoming model. Additionally, distinguishing between home and away matches underscores the significance of incorporating the home effect as a model parameter. These visualizations not only provide a glimpse into the team dynamics but also inform the modeling approach by highlighting factors that influence match outcomes.
+Another interesting aspect to explore are the goal statistics by team. In particular, by examining goals scored and conceded by each team, we gain valuable insights into the potential ranking of attack and defense coefficients in our upcoming model. Additionally, distinguishing between home and away matches underscores the significance of incorporating the home effect as a model parameter. 
 
 ```{r}
 # Preliminary steps required to make plots
@@ -248,7 +310,8 @@ goals_conceeded_HvsA_plot<- goals_conceeded %>%
   )
 goals_scored_HvsA_plot |goals_conceeded_HvsA_plot
 ```
-Comment: only five teams (out of a total of twenty) have scored more goals away than at home. Except for Napoli, which has scored the same number of goals at home and away, all other teams have had better offensive performances when playing in their own stadium. Symmetrically, only six teams have conceded more goals at home than away. All other teams have shown better defensive performances when playing in their own stadium (Inter, Salernitana, and Udinese, actually conceded the same number of goals at home and away).
+
+**Comment:** only five teams (out of a total of twenty) have scored more goals away than at home. Except for Napoli, which has scored the same number of goals at home and away, all other teams have had better offensive performances when playing in their own stadium. Symmetrically, only six teams have conceded more goals at home than away. All other teams have shown better defensive performances when playing in their own stadium (Inter, Salernitana, and Udinese, actually conceded the same number of goals at home and away).
 
 The existence of a home effect is suggested also by the useful results achieved by each team, differentiated between outcomes at home and away:
 
@@ -375,7 +438,7 @@ with:
 Under the above parametrization, all parameters have a straightforward interpretation:
 
 - $h_{eff}$ is the **home effect**, which describes the advantage for a team of playing the match at its stadium;
-- $\mu$ is a constant, representing the average "ability" (combining attack and defence) of a team in the analyzed league;
+- $\mu$ is a constant, representing the average "ability" (combining both attack and defence at the same time) of a team in the analyzed league;
 - $att_{(t)}$ represents the **attack strength** of team $t$;
 - $def_{(t)}$ represents the **defence weakness** of team $t$;
 
@@ -389,7 +452,8 @@ $$f_{S}\left(x,\theta_1,\theta_2\right)= e^{-(\theta_1+\theta_2)} \left(\frac{\t
 with $x \in \mathbb{Z},\theta_1,\theta_2 >0$ and where $I_{|r|}(\bullet)$ is the modified Bessel function of order r (check it [here](https://en.wikipedia.org/wiki/Bessel_function#Modified_Bessel_functions))
 
 
-In my previous experience with goal-based models, I noticed that the number of draws (and the corresponding probability) tends to be underestimated. To address this, I explored the idea proposed by Karlis and Ntzoufras of using a zero-inflated version of the Skellam distribution. This approach seemed promising to me, and its probability distribution is defined as:
+In my previous experience with goal-based models, I noticed that the number of draws (and the corresponding probability) tends to be underestimated. To address this, I explored the idea proposed by Karlis and Ntzoufras of using a zero-inflated version of the Skellam distribution. This approach seemed promising to me, so the probability distribution which I referred to has been the following:
+
 \begin{align*}
   f_{ZIS}\left(x,\theta_1,\theta_2,p\right) =
   \begin{cases}
@@ -409,11 +473,11 @@ To fully specify a Bayesian model, we need to define prior distributions for the
   p \sim U(0,1)
 \end{align*}
 
-In addition to the standard approach, I considered an online learning approach. In the Bayesian framework, we typically start with a prior distribution and update it with observed data to obtain a posterior distribution. When new data becomes available, this posterior can serve as the prior for the next update and so on. Despite concerns about specifying overly informative priors, I was curious to compare the online learning approach with the traditional "offline" model, where the "information" that updates our knowledge derives (almost) only from the data.
+In addition to the standard approach, I considered an <u>*online-learning* approach</u>. In the Bayesian framework, we typically start with a prior distribution and update it with observed data, in order to obtain a posterior distribution. When new data becomes available, this posterior can serve as the prior for the next update and so on. Despite concerns about specifying overly informative priors, I was curious to compare the online learning approach with the traditional "offline" model, where the information that updates our knowledge derives (almost) only from the data.
 
-**Note**: in principle we don't know the functional form of the posterior distribution. However, in my analysis I assumed my priors to be normal, updating only their location and scale matchday by matchday.
+**Note**: in principle we don't know the functional form of the posterior distribution. However, in my analysis ,I assumed my priors to be normal, updating only their location and scale according to the matchday by matchday estimates.
 
-The formulation of the online model has the same likelihood of the offline one, except from the priors specification. More precisely, at a certain matchday $m$, the priors will be the following:
+The formulation of the online model has -of course- the same likelihood of the offline one, except from the priors specification. More precisely, at a certain matchday $m$, the priors will be the following:
 
 \begin{align*}
   \mu &\sim N\big(MAP(\mu)^{(m-1)},\sigma_{\mu}^{(m-1)}\big)\\[0.2cm]
@@ -427,17 +491,17 @@ The formulation of the online model has the same likelihood of the offline one, 
 
 # Model implementation in `Stan`
 
-The models have been fully implemented using the `Stan` ecosystem and managed in R through the library `rstan`. I decided to follow the procedure illustrated by Karlis and Ntzoufras in their article, setting the following MCMC parameters:
+The models have been fully implemented using the `Stan` ecosystem and managed in R through the library `rstan`. I decided to follow carefully the procedure illustrated by Karlis and Ntzoufras in their article, setting the following MCMC parameters:
 
 - `N_CHAINS`= 4
 - `N_ITERS`= 11000
 - `N_WARMUP`= 1000
 
-In what follows the main blocks of the stan files are illustrated.
+In what follows the main blocks of the Stan files are illustrated.
 
 ## Offline model
 
-- <u>Functions</u>: I had to define some custom functions, since `Stan` does not provide the log pmf of a Skellam
+- <u>**Functions**</u>: since `Stan` did not provide the *log pmf* of a Skellam, I had to define my own custom functions 
   ```{R,echo=T,eval=F}
   functions {
     real skellam_lpmf(int k, real lambda1, real lambda2) {
@@ -463,7 +527,7 @@ In what follows the main blocks of the stan files are illustrated.
     }
   }
   ```
-- <u>Data</u>:
+- <u>**Data**</u>:
   ```{r,eval=FALSE}
   data {
     int<lower=1> n_teams;
@@ -473,7 +537,7 @@ In what follows the main blocks of the stan files are illustrated.
     array[n_games] int goal_difference;
   }
   ```
-- <u>Parameters and transformed parameters</u>
+- <u>**Parameters and transformed parameters**</u>:
   ```{r,eval=FALSE}
   parameters {
     real<lower=0, upper=1> p;
@@ -497,7 +561,7 @@ In what follows the main blocks of the stan files are illustrated.
     def[n_teams] = -sum(def_raw);
   }
   ```
-- <u>Model</u>
+- <u>**Model**</u>:
   ```{r,eval=F}
   model {
     array[n_games] real theta_H;
@@ -516,9 +580,9 @@ In what follows the main blocks of the stan files are illustrated.
     }
   }
   ```
-- <u>Generated quantities</u>: I couldn't exploit the generated quantities block since `Stan` does not provide any random generator for the Skellam distribution (`skellam_rng()`). Some users by-pass this limitations by generating 2 values from a Poisson (with `poisson_rng()`) and computing their subtraction, but this would be in contrast with our setup, in which we don't assume Poisson marginals. However, the generated quantities can be computed in R even after the model has been fitted! I opted for this latter approach, referring to the `skellam` library without the need of re-inventing the wheel.
+- <u>**Generated quantities**</u>: I couldn't exploit the generated quantities block since `Stan` does not provide any random generator for the Skellam distribution (a sort of `skellam_rng()`). Some users usually by-pass this limitations by generating 2 values from a Poisson (with `poisson_rng()`) and computing their subtraction, but this would be in contrast with our setup, in which we don't assume Poisson marginals. Fortunately, the generated quantities can be easily computed in R after the model has been fitted! I opted for this latter approach, referring to the `skellam` library without the need of re-inventing the wheel.
 
-**Technical Note:**  the `skellam` library provided a `rskellam()` function, but the documentation specified that it worked internally by generating 2 random Poissons (with `rpois()`), which it the mechanism I wanted to avoid :( Nevertheless, I could easily implement a custom Skellam generator through the *inverse-sampling* method, exploiting the `qskellam()` function from the library, as shown below:
+**Technical Note:**  the `skellam` library provided a `rskellam()` function, but the documentation clearly specified that it worked internally by generating 2 random Poisson (with `rpois()`), which was the mechanism I wanted to avoid :( Nevertheless, I could easily implement a custom Skellam generator through the *inverse-sampling* method, exploiting the `qskellam()` function from the same library, as shown below:
 
 ```{r,echo=T,eval=FALSE}
 library(skellam)
@@ -547,7 +611,7 @@ my_rzeroinflatedskellam<- function(n,lambda1,lambda2,p){
 
 ## Online model
 
-The stan code for the online model is similar to the previous one, with the major differences in the data block and in the priors definition (model block)
+The Stan code for the online model is similar to the previous one, with the major differences in the data block and in the priors definition (model block)
 
 ```{r,eval=F}
 data {
@@ -581,12 +645,12 @@ model {
 }
 ```
 
-**Important notes** 
+<u>**Disclaimer**</u>:
 
-- Due to the extensive time required to fit the models, I am not including the code here (it is not particularly interesting, though). However, I have fitted the models and stored them in a dedicated folder, and they are available in the repository.
-- The bayesian procedure of fitting the model matchday by matchday is, in practice, done on a weekly basis. With access to the complete dataset for the analyzed season, I was able to fit the models in a for loop, iterating over each matchday. The procedure for each iteration is as follows:
+- Due to the extensive time required to fit the models, I am not including the full code here (it is not particularly interesting, though). However, I have fitted all the models and stored them in a dedicated folder, with the possibility of loading each of them when required.
+- The bayesian procedure of fitting the model matchday by matchday is, in practice, done on a weekly basis. With access to the complete dataset for the analyzed season, I was able to fit the models in a for loop, iterating over each matchday. The procedure for each iteration is the following:
     1. Select the rows of the dataframe corresponding to the available information up to the current matchday.
-    2. Load the model estimated at the end of the previous matchday from the models folder.
+    2. Load the model estimated at the end of the previous matchday (from the models folder).
     3. Fit the model and store the updated model in the dedicated folder.
 
 ---
@@ -779,8 +843,8 @@ for (t in 1:length(teams)) {
 
 # Plot
 ggplot(scatterplot_df,aes(Att, Def)) +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "grey35") +
-  geom_vline(xintercept = 0, linetype = "dashed", color = "grey35") +
+  geom_hline(yintercept = mean(posterior[,,"mu"]), linetype = "dashed", color = "grey35") +
+  geom_vline(xintercept = mean(posterior[,,"mu"]), linetype = "dashed", color = "grey35") +
   geom_image(aes(image = Logo), size = 0.06) + 
   ylim(-1,1.5)+
   labs(x= "Attack strength",
@@ -798,7 +862,7 @@ ggplot(scatterplot_df,aes(Att, Def)) +
 
 ### Abilities over time
 
-<u>Teams's abilities over time (offline model)</u>
+<u>**Teams's abilities over time (offline model)**</u>
 
 ```{r,echo=F,dpi=200,warning=F,message=F,echo=F,fig.width=20,fig.height=15}
 # Coefficients time series
@@ -817,7 +881,7 @@ offline_plot_list <- lapply(teams, function(t) {
   (offline_plot_list[[17]] | offline_plot_list[[18]] |offline_plot_list[[19]] | offline_plot_list[[20]])
 ```
 
-<u>Teams's abilities over time (online model)</u>
+<u>**Teams's abilities over time (online model)**</u>
 
 ```{r,echo=F,dpi=200,warning=F,message=F,echo=F,fig.width=20,fig.height=15}
 online_ts_df<- get_all_teams_data(teams_list=teams,start=19,end=38,models_dir_path =ONLINE_MODELS_DIR)
@@ -841,25 +905,25 @@ online_plot_list <- lapply(teams, function(t) {
 
 # A glimpse to convergence diagnostics
 
-The training phase of the models seemed promising, as the MCMC procedure completed without any warnings or errors. To assess the convergence of the chains, we can inspect the summary of the models and look at the Gelman-Rubin statistics $\hat{R}$ (*Rhat*), which provide a quantitative measure of the chains' convergence to the steady state.
+The training phase of the models seemed promising, as the MCMC procedure completed succesfully without any warning or error. To assess the convergence of the chains, we can inspect the summary of the models and look at the Gelman-Rubin statistics $\hat{R}$ (*Rhat*), which provide a quantitative measure of the chains' convergence to the steady state.
 
-<u>Offline model</u>
+<u>**Offline model**</u>
 ```{r,echo=F}
 load(paste0(OFFLINE_MODELS_DIR,"matchday38/KN_matchday38.rds"))
 posterior=as.array(KN_model)
 print(KN_model,pars=c("mu","home_advantage",att_params,def_params))
 ```
 
-<u>Online model</u>
+<u>**Online model**</u>
 ```{r,echo=F}
 load(paste0(ONLINE_MODELS_DIR,"matchday38/KN_matchday38.rds"))
 posterior=as.array(KN_model)
 print(KN_model,pars=c("mu","home_advantage",att_params,def_params))
 ```
 
-In the summary, all *Rhat* values are equal to 1, indicating convergence of the chains (remember the rule of thumb, $\hat{R}< 1.1$). Additionally, the effective sample size (n_eff) values are high, which is a positive indicator. Notably, the n_eff values for the online model are generally higher than those for the offline models, which was something that I somehow expected. Interestingly, many n_eff values (all, actually, for the online model) are greater than the total number of samples set during the fitting process. At first, this seemed paradoxical to me. However, after reading various discussions on the Stan developers forum, I found the following answer:*"Hi! It means that the draws that Stan is producing are better than independent draws for those parameters. Sounds like a joke, but apparently Stan is actually that awesome. :)"*. (I leave the link to the discussion [here](https://discourse.mc-stan.org/t/n-eff-greater-than-number-of-iterations/7114))
+In the summaries, all the `Rhat` values are equal to 1, indicating convergence of the chains (remember the rule of thumb, $\hat{R}< 1.1$). Additionally, the effective sample size (`n_eff`) values are high, which is a positive indicator. Notably, the `n_eff` values for the online model are generally higher than those for the offline models, which was something that I somehow expected. Interestingly, many `n_eff` values (all, actually, for the online model) are greater than the total number of samples set during the fitting process. At first, this seemed paradoxical to me. However, after reading various discussions on the Stan developers forum, I found the following answer:*"Hi! It means that the draws that Stan is producing are better than independent draws for those parameters. Sounds like a joke, but apparently Stan is actually that awesome. :)"*. (I leave the link to the discussion [here](https://discourse.mc-stan.org/t/n-eff-greater-than-number-of-iterations/7114))
 
-Thanks to the `bayesplot` package, we can also plot the traceplots to visually inspect for divergent transitions. In our case, no chains had diverged, so the plots are not particularly interesting. However, if there had been any divergent chains, they would be evident in these plots. As an example, I present the traceplots for the attack and defense coefficients from the online model:
+Thanks to the `bayesplot` package, we can also plot the traceplots and visually inspect for divergent transitions. In our case, no chain had diverged, so the plots are not particularly interesting. However, if there had been any divergent chains, they would be evident in the plots below. As an example, I'll present only the traceplots for the attack and defense coefficients of the online model:
 
 ```{r,echo=F,dpi=200,warning=T,message=T,echo=F,fig.width=20,fig.height=15}
 color_scheme_set("blue")
@@ -885,7 +949,7 @@ def_traceplot
 ```
 
 
-After examining the Gelman-Rubin statistic and the effective sample size, another important diagnostic for assessing convergence is the autocorrelation function (ACF) plot. This plot helps to inspect the autocorrelations within the chain samples. Upon reviewing all the ACF plots, I did not observe any particularly concerning patterns. To provide a comprehensive overview, I will present ACF plots just for two parameters: one with greater variability (the defense coefficient for Venezia FC) and one with less variability (the attack coefficient for Inter). These examples illustrate that regardless of the variability, there are no significant autocorrelation patterns, indicating good convergence properties of the model
+After examining the Gelman-Rubin statistic and the effective sample size, another important diagnostic for assessing convergence is the autocorrelation function (ACF) plot. This plot helps to inspect the autocorrelations within the chain samples. Upon reviewing all the ACF plots, I did not observe any particularly concerning patterns. To provide a comprehensive overview, I will present ACF plots just for two parameters: one with greater variability (the defense coefficient for Venezia FC) and one with less variability (the attack coefficient for Inter). These examples illustrate that regardless of the variability, there are no significant autocorrelation patterns, indicating good convergence properties of the model.
 
 ```{r,echo=FALSE,warning=FALSE,message=FALSE}
 color_scheme_set("blue")
@@ -910,9 +974,9 @@ So far we have constructed a Bayesian model, computed the posterior distribution
 
 ## Posterior predictive checks (in-sample replications)
 
-As illustrated in the *Bayesian Data Analysis* book, a key technique for assessing model fit involves drawing simulated values from the posterior predictive distribution and comparing them to the observed data. More specifically, we'll perform now an <u>in-sample</u> replication analysis. Here, we aim to assess whether the model adequately captures the observed data by assessing the plausibility of the observed data under the posterior predictive distribution. If the model is well-fitted, replicated data generated under its framework should closely resemble the observed data, while any discrepancy between the replicated and observed data may indicate model misfit or chance variations. If the model fits, then replicated data generated under the model should look similar to observed data. In summary, the observed data should look plausible under the posterior predictive distribution.
+As illustrated in the *Bayesian Data Analysis* book, a key technique for assessing model fit involves drawing simulated values from the posterior predictive distribution and comparing them to the observed data. More specifically, we'll perform now an <u>**in-sample replication**</u> analysis. Here, we aim to assess whether the model adequately captures the observed data by assessing the plausibility of the observed data under the posterior predictive distribution. If the model is well-fitted, replicated data generated under its framework should closely resemble the observed data, while any discrepancy between the replicated and observed data may indicate model misfit or chance variations. If the model fits, then replicated data generated under the model should look similar to observed data. <u>In short, the observed data should look plausible under the posterior predictive distribution</u>.
 
-The analysis of model checking can be effectively conducted in a graphical/qualitative manner. Fortunately, our friend `bayesplot` offers a suite of graphical solutions to assess the posterior predictive distribution for our in-sample analysis. Before delving into the graphical model checking plots, a preliminary step is required. Due to limitations in defining the generated quantities block in Stan, as discussed earlier, it was necessary to simulate these quantities in R.
+The analysis of model checking can be effectively conducted in a graphical/qualitative manner. Fortunately, our friend `bayesplot` offers a suite of graphical solutions to assess the posterior predictive distribution for our in-sample analysis. Before delving into the graphical model checking plots, a preliminary step is required. Due to limitations in defining the generated quantities block in Stan, as discussed earlier, it was necessary to simulate these quantities in R (as shown in the chunks below).
 
 **Note**: In conducting the in-sample replication procedure, we assess the plausibility of observed data relative to replications drawn from the model trained with such data. While it is possible to perform this check match day by match day, I opted to utilize our more comprehensive model—the one estimated after the final match of the season. By employing this approach, the observed results encompass the entirety of the season's data, providing a robust assessment of model fit across the entire dataset.
 
@@ -1045,6 +1109,7 @@ ppc_stat_2d_online <- ppc_stat_2d(y = SerieA_data$GD,
                                   stat = c("mean","sd"))
 ```
 
+**Note**: here,the plots on the left (right) side are referred to the offline (online) model!
 
 ```{r,fig.align='center',dpi=250,warning=F,message=F,echo=F,fig.width=14,fig.height=6}
 ppc_dens_overlay_offline | ppc_dens_overlay_online
@@ -1062,15 +1127,17 @@ ppc_stat_2d_offline | ppc_stat_2d_online
 
 ## Posterior predictive checks (out-sample replications)
 
-Having completed the in-sample posterior predictive checks, we now turn our attention to out-of-sample replication. This process involves testing the model on future observable values or vectors of new observable quantities. Specifically, for our football league analysis, I employed a sequential prediction strategy based on matchdays. Recall that we initially estimated models matchday by matchday, starting from the end of the first half of the league.
+Having completed the in-sample posterior predictive checks, we now turn our attention to <u>**out-of-sample replication**</u>. This process involves testing the model on future observable values or vectors of new observable quantities. Specifically, for our football league analysis, I employed a sequential prediction strategy based on matchdays. Recall that we initially estimated models matchday by matchday, starting from the end of the first half of the league.
 
-With the model fitted using data up to matchday $m$, I used it to predict the outcomes of matchday $m+1$. The Bayesian approach, with its chain samples, offers a significant advantage over classical statistics: instead of estimating a single value (either as a point estimate or with confidence intervals), we can construct a distribution for our quantities of interest. In this case, using the chain samples, I simulated the goal differences for each match, obtaining numerous samples from the distribution of goal differences for a given match.
+With the model fitted using data up to matchday $m$, I used it to predict the outcomes of matchday $m+1$ (which are future, unknown data!). <u>The Bayesian approach, with its chain samples, offers a significant advantage over classical statistics</u>: instead of estimating a single value (either as a point estimate or with confidence intervals), <u>we can obtain a distribution for our quantities of interest</u>. In this case, using the chain samples, I simulated the goal differences for each match, obtaining numerous samples from the distribution of goal differences for a given match.
 
-This distribution allowed me to assign probability values to the final outcomes, encoded as "H" (Home win), "D" (Draw) and "A" (Away win). I selected the most frequent class as a guess for each match's final outcome and, by repeating this for all matches in the second half of the league, I constructed confusion matrices to compare the model's accuracy. Additionally, I computed the Brier score matchday by matchday to further assess the predictive power of my models.
+Such distribution then allowed me to assign probability values to the final outcomes, encoded as "H" (Home win), "D" (Draw) and "A" (Away win). I selected the most frequent class as a guess for each match's final outcome and, by repeating this for all matches in the second half of the league, I constructed **confusion matrices** to compare the model's accuracy. Additionally, I computed the **Brier score** matchday by matchday to further assess the predictive power of my models.
 
-Let's start with the accuracy:
+### Accuracy and Brier Score
 
-<u>Offline model</u>:
+Let's start from the accuracy:
+
+<u>**Offline model**</u>:
 
 ```{r,eval=F}
 SerieA_data$PredictedGD=NA
@@ -1129,9 +1196,9 @@ ConfusionMatrix_offline_df<- ConfusionMatrix_offline_df %>% mutate(
  )
 ```
 
-<u>Online model</u>
+<u>**Online model**</u>
 
-The same procedure can be performed for the online model (we just need to change `OFFLINE_MODELS_DIR` with `ONLINE_MODELS_DIR` in the `load` function), so I am not going to show the full code again. In the end, we get a confusion matrix also for the online model:
+The same procedure can be performed for the online model (we just need to change `OFFLINE_MODELS_DIR` with `ONLINE_MODELS_DIR` in the `load()` function), so I am not going to show the full code again. In the end, we get a confusion matrix also for the online model:
 
 ```{r,echo=FALSE}
 ConfusionMatrix_online_df<- read.csv("CM_online.csv")
@@ -1150,7 +1217,7 @@ ConfusionMatrix_online_df<- ConfusionMatrix_online_df %>% mutate(
  )
 ```
 
-Let's now compare the two Confusion matrices:
+Comparison of the two Confusion matrices:
 
 ```{r,fig.align='center',dpi=250,warning=F,message=F,echo=F,fig.width=12,fig.height=6}
 plot_confusionmatrix(CM_offline, "Karlis-Ntzoufras (Offline)") | plot_confusionmatrix(CM_online, "Karlis-Ntzoufras (Online)")
@@ -1162,13 +1229,14 @@ cat(">> Balanced accuracy of the online model :",CM_online$`Balanced Accuracy`,"
 ```
 
 
-The plotted confusion matrices highlight the similarity in predictions between the models. Notably, the (balanced) accuracy of the offline model is slightly higher than that of the online model. However, keep in mind that while accuracy is an important measure for assessing a model, it is not the sole factor in determining its suitability.
+The two confusion matrices highlight the similarity in predictions between the models. Notably, the (balanced) accuracy of the offline model is slightly higher than the one of the online model. However, keep in mind that while accuracy is an important measure for assessing a model, it is not the sole factor in determining its suitability.
 
-Additionally, the similarity in performance between the models is further evidenced by their Brier scores, which is defined as:
+Additionally, the similarity in performance between the models is further evidenced by their Brier scores, which is an evaluation metric defined as:
 
 $$BS = \frac{1}{M} \sum_{m=1}^{M}{\sum_{i}{(p_{mi} - d_{mi})^2}} \hspace{0.2cm}\; \hspace{0.2cm}\text{with } i\in \{H,D,A\}$$
+**Note**: for the Brier score it holds the rule *The lower, the better!*
 
-Despite the BS being an overall measure of performance (like accuracy, though), I found it interesting to plot it matchday by matchday:
+Despite the BS being an overall measure of performance (like accuracy, though), I found it interesting to compute it (and to plot it) matchday by matchday:
 
 ```{r,echo=TRUE,fig.align='center',dpi=200,fig.width=9, fig.height=5}
 BS_ts<- read.csv("BS_ts.csv")
@@ -1181,12 +1249,13 @@ BS_ts %>%
   ggtitle("Brier score for predictions mathday by matchday")
 ```
 
-Following the Brier score plot, we observe that both approaches yield very similar results in terms of this predictive metric. However, it's important to note that, in general, these quantitative measures do not provide the full picture. The ideal approach is to consider the entirety of our analysis, integrating various aspects, both quantitative and qualitative.
+Following the Brier score plot, we observe that both approaches yield very similar results in terms of predictive performance. However, it is important to notice that, in general, <u>these quantitative measures do not provide the full picture. The ideal approach is to consider the entirety of our analysis, integrating various aspects, both quantitative and qualitative</u>.
 
-As an example, I did something interesting to evaluate and compare the models. I implemented a simulation of the final rankings. Starting from the situation at the halfway point of the season, I began simulating matches. With the model fitted after the $m$-th match, I made predictions for match $m+1$. Thanks to the Bayesian approach, I obtained a distribution of the goal differences. From this distribution, it is relatively straightforward to derive a distribution of the points. By proceeding in this manner, I obtained the distribution of the final points at the end of the season. Having a distribution allows me to provide the expected number of points at the end of the season, along with a confidence band for this result. This approach offers a comprehensive view of the potential outcomes, capturing the inherent uncertainty and variability in the two models.
+### Final rankings simulations
 
+In the previous section we highlighted how an ideal approach should integrate various aspects, both quantitative and qualitative. As an example, I did something (hopefully) interesting to evaluate and compare the models: I implemented a simulation of the final rankings. Starting from the situation at the halfway point of the season, I began simulating matches. With the model fitted after the $m$-th match, I made predictions for match $m+1$. Thanks to the Bayesian approach, I obtained a distribution of the goal differences and, from this distribution, it was relatively straightforward to derive a distribution of the points for each team. By proceeding in this manner over all the matchdays, I obtained the distribution of the final points at the end of the season. Having a distribution allowed me to provide the expected number of points at the end of the season, along with a confidence band for the result. This approach offers a comprehensive view of the potential outcomes, capturing the inherent uncertainty and variability in our two models.
 
-To perform this task, I implemented a custom util for retrieving the final points distribution:
+To perform this task, I implemented a custom function for retrieving the final points distribution:
 
 ```{r,eval=F}
 final_pts_distribution<- function(teams,start=20,end=38,
@@ -1326,7 +1395,7 @@ table_offline<- offline_rankings %>%
   arrange(desc(Pts_mode)) %>%
   mutate(Position = row_number()) %>%
   select(Position,Team,Pts_mean,Pts_mode,Pts_lower.95,Pts_lower.50,Pts_upper.50,Pts_upper.95) %>%
-  kbl(caption = "Serie A 2021-2022 simulated rankings (offline)", align = 'c') %>%
+  kbl(caption = "Serie A 2021-2022 simulated rankings (offline models)", align = 'c') %>%
   kable_styling(font_size = 12, full_width = F) %>%
   row_spec(0, background = "#FFFFFF", color = "#000000",bold=T) %>%
   # Champions League
@@ -1338,8 +1407,6 @@ table_offline<- offline_rankings %>%
   # Relegation
   row_spec((nrow(offline_rankings)-2):nrow(offline_rankings), background = "#FF9E94") %>%
   row_spec(1:nrow(offline_rankings), extra_css = "border-top: 1px solid black;")
-
-table_offline
 ```
 
 
@@ -1348,7 +1415,7 @@ table_online<- online_rankings %>%
   arrange(desc(Pts_mode)) %>%
   mutate(Position = row_number()) %>%
   select(Position,Team,Pts_mean,Pts_mode,Pts_lower.95,Pts_lower.50,Pts_upper.50,Pts_upper.95) %>%
-  kbl(caption = "Serie A 2021-2022 simulated rankings (offline)", align = 'c') %>%
+  kbl(caption = "Serie A 2021-2022 simulated rankings (online models)", align = 'c') %>%
   kable_styling(font_size = 12, full_width = F) %>%
   row_spec(0, background = "#FFFFFF", color = "#000000",bold=T) %>%
   # Champions League
@@ -1360,12 +1427,133 @@ table_online<- online_rankings %>%
   # Relegation
   row_spec((nrow(online_rankings)-2):nrow(online_rankings), background = "#FF9E94") %>%
   row_spec(1:nrow(online_rankings), extra_css = "border-top: 1px solid black;")
+```
 
+```{r,echo=F}
+table_offline
+cat("\n")
 table_online
 ```
 
 
+We can also plot the final rankings distributions and compare them with the real observed points
+
+```{r}
+real_points= data.frame(
+  Team=teams,
+  Pts=NA
+)
+for (t in 1:n_teams){
+  n_wins= SerieA_data %>% filter(((ht==t) &(FTHG>FTAG)) | ((at==t) & (FTHG<FTAG)))%>% nrow() 
+  n_draws= SerieA_data %>% filter(((ht==t) | (at==t)) & (FTHG == FTAG))%>% nrow()
+  real_points$Pts[t]= 3*n_wins+n_draws
+}
+```
+
+```{r,echo=F}
+color_scheme_set("brightblue")
+# Lazy passages to re-order columns basing on their mean
+ordered_teams<- final_pts_offline %>%
+  summarise_all(mean) %>%
+  round() %>%
+  gather() %>%
+  arrange(desc(value)) %>%
+  pull(key)
+# Reorder columns based on mean points
+final_pts_offline <- final_pts_offline[, ordered_teams]
+final_pts_online <- final_pts_online[, ordered_teams]
+```
+
+
+```{r,echo=F}
+final_pts_offline_plot<- final_pts_offline %>% 
+  mcmc_intervals()+
+    labs(title="Estimated final rankings (offline model)",
+         x = "Points",
+         y= "Teams")+
+    geom_point(
+      data = real_points,
+      aes(x = Pts, y = Team), 
+      size = 3.5,
+      shape=21,
+      color="black",
+      fill="indianred2"
+    )+
+    theme(plot.title = element_text(hjust = 0.5,face = "bold",size=18),
+          axis.title.x = element_text(size=12, face="bold", colour = "black"),
+          axis.text.x = element_text(size=10, face="plain", colour = "black"),
+          axis.title.y = element_text(size=12, face="bold", colour = "black"),
+          axis.text.y = element_text(size=10, face="plain", colour = "black"),
+    )
+
+final_pts_online_plot<- final_pts_online %>% 
+  mcmc_intervals()+
+    labs(title="Estimated final rankings (online model)",
+         x = "Points",
+         y= "Teams")+
+    geom_point(
+      data = real_points,
+      aes(x = Pts, y = Team), 
+      size = 3.5,
+      shape=21,
+      color="black",
+      fill="indianred2"
+    )+
+    theme(plot.title = element_text(hjust = 0.5,face = "bold",size=18),
+          axis.title.x = element_text(size=12, face="bold", colour = "black"),
+          axis.text.x = element_text(size=10, face="plain", colour = "black"),
+          axis.title.y = element_text(size=12, face="bold", colour = "black"),
+          axis.text.y = element_text(size=10, face="plain", colour = "black"),
+    )
+```
+
+```{r,fig.align='center',dpi=350,warning=F,message=F,echo=F,fig.width=14,fig.height=8}
+final_pts_offline_plot | final_pts_online_plot
+```
+
+
+Upon reviewing the simulated rankings generated by the two models against the actual Serie A 2021-2022 standings, several key observations can be made:
+
+- **Overall Picture**
+
+  - Both models effectively captured the overall situation of the league. Specifically, they identified the correct trend for many teams, even though the exact positions was not always correct.
+  - Lower Table: The points for lower-ranked teams were generally underestimated, as these teams secured more points than predicted.
+  - Upper Table: The points for top-ranked teams were slightly overestimated but not significantly.
+
+
+- **Qualifications to the European competitions**
+
+  The models' predictions for the top 7 positions, which determine qualification for European competitions (Champions League, UEFA Europa League, and Conference League), showed notable accuracy. In particular, both the offline model and the online model correctly identified 6 out of 7 teams. However, the exact rankings of these teams were not as accurate. For instance, both models predicted Inter to top the league, while Milan actually won the championship. This discrepancy can be attributed to the competitive nature of the season. Additionally, Milan's final matches were much more challenging than Inter's ones, which could explain why the models predicted Inter to win.
+
+
+- **Some notable examples**
+  - <u>Inter</u>: Predicted as the top team by both models but actually finished second. The season was highly competitive, and Milan's more challenging end-of-season schedule was a significant factor in the outcome.
+  - <u>Atalanta</u>: Predicted to qualify for the Champions League in both models. However, after a strong first half of the season, Atalanta experienced a significant drop in form, which the models did not account for.
+  - <u>Relegation Zone</u>: both models accurately predicted Genoa and Cagliari as relegated teams. Venezia was predicted to avoid relegation, whereas in reality, they did not. Additionally, both models predicted Salernitana to finish last. Given the team's position at the 32nd matchday, where they were at the bottom of the table and seemingly destined for relegation, this prediction was reasonable (Salernitana's miraculous escape under coach Davide Nicola contradicted everyone's expectations on earth).
+
+
+Nevertheless, it is important to note that football is inherently unpredictable. Our models, despite their simplicity, managed to capture the broader trends effectively, which is admirable considering the inherent randomness and volatility of this beautiful sport.
 
 ---
 
 # Conclusions and further developments
+
+- **Model Insights**: Despite the simplicity of the model, it provided numerous interesting insights into the Serie A season analyzed. The estimates and predictive checks were generally consistent with real data, demonstrating the model's robustness.
+
+- **Bayesian Approach Advantages**: Compared to previous projects using goal-based models, the Bayesian approach offered significant advantages. Dealing with distributions of parameters instead of just point estimates (with or without confidence intervals) allowed for:
+  - Simulating matches with greater detail.
+  - Estimating probabilities through simulations.
+  - Checking the goodness of results via posterior predictive checks
+
+- **Comparison of Approaches**: The comparison between the online and offline approaches revealed similar predictive performances for the analyzed season, in terms of both (balanced) accuracy and Brier score. However, it was particularly evident that the online learning approach provides narrower variability bands in coefficient estimates over time, suggesting more precise and stable estimates.
+
+- **Future Comparisons**: It would be beneficial to compare the two approaches using multiple seasons' data. My personal guess is that the online approach might outperform the offline approach in terms of quantitative metrics, especially when dealing with evolving data over several seasons.
+
+- **Interpretative Tool**: While the model is simple and not suitable for betting or making precise predictions (mainly due to the inherent randomness of football itself), it serves as an excellent interpretative tool. It captures the dynamics over time and provides valuable insights into the factors influencing team performance. Even more complex models in the literature struggle to make accurate predictions in football, underscoring the sport's unpredictability.
+
+- **Further Developments**:
+  - **Variational Inference**: One of the limitations encountered was the slow sampling process. Incorporating variational inference procedures could significantly speed up the computations. Due to time constraints, only a preliminary exploration of this method was possible, but it will be for sure one of the points I will explore in next months.
+  - **Multiple Seasons Analysis**: Extending the analysis to multiple seasons might provide a more comprehensive understanding of team performance and model accuracy. This would also test the robustness of the online learning approach in capturing long-term trends.
+  - **Model Enhancements**: Future work could also explore enhancing the model's complexity, such as incorporating more advanced statistical techniques or additional variables that could impact team performance (e.g., player injuries, manager changes, etc.).
+
+In summary, this project demonstrated the utility of a Bayesian approach in sports analytics, providing a solid foundation for further exploration and development. The model's simplicity and interpretative power make it a valuable tool for understanding football dynamics, while future enhancements could improve both its computational costs and its predictive capabilities.
