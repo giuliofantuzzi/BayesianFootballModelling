@@ -1,7 +1,10 @@
-# BayesianExam
+# Bayesian Statistics Final Exam
 
 Repository for the "Bayesian Statistics" course, MSc degree in Data Science & AI (University of Trieste)
 
+| Name | Surname | Student ID | UniTs email | Personal email | Course |
+|:----:|:-------:|:----------:|:-----------:|:--------------:|:------:|
+| Giulio | Fantuzzi | SM3800012 | GIULIO.FANTUZZI@studenti.units.it | giulio.fantuzzi01@gmail.com | DSAI|
 ---
 
 # About
