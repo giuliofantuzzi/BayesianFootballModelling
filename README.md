@@ -76,7 +76,7 @@ To address this limitation, *Karlis and Ntzoufras* proposed an alternative appro
 
 This report presents the findings of a comprehensive analysis of <u>Serie A football league data for the 2021-2022 season</u>. Given the inherent complexity of the analysis at hand, my project is structured into several directories, each serving a specific purpose in the data collection, analysis, and modeling process.
 
-1. `data/` is organised in subfolders for specific seasons, containing the raw data collected from [football-data.co.uk](www.football-data.co.uk). 
+1. `data/` is organised in subfolders for specific seasons, containing the raw data collected from [football-data.co.uk](https://www.football-data.co.uk). 
 
 2. `web-scraping/` contains a python web scraper (`scraper.py`) to automatically retrieve and download datasets for all major European teams. By executing the scraper from the terminal and providing the desired season, users can download datasets for analysis. Example of usage:
     ```bash
