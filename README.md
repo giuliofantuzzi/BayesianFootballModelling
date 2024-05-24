@@ -76,7 +76,7 @@ This report presents the findings of a comprehensive analysis of <u>Serie A foot
 1. `data/` is organised in subfolders for specific seasons, containing the raw data collected from [football-data.co.uk](www.football-data.co.uk). 
 
 2. `web-scraping/` contains a python web scraper (`scraper.py`) to automatically retrieve and download datasets for all major European teams. By executing the scraper from the terminal and providing the desired season, users can download datasets for analysis. Example of usage:
-    ```{r,eval=F}
+    ```bash
     python3 scraper.py <season> #e.g 2122
     ```
 
