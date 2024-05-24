@@ -43,6 +43,7 @@ teams<- str_replace_all(teams, " ", "")
 offline_pts_distribution<- final_pts_distribution(teams,start=20,end=38,
                                                   n_chains=N_CHAINS,n_iters=N_ITERS,n_warmup=N_WARMUP,
                                                   models_dir =OFFLINE_MODELS_DIR)
+write.csv(offline_pts_distribution,"report/final_pts_offline.csv",row.names = FALSE)
 offline_final_table<- data.frame(Team= teams,
                          Pts_mean=NA,
                          Pts_mode=NA,
@@ -63,6 +64,7 @@ for(t in 1:n_teams){
 online_pts_distribution<- final_pts_distribution(teams,start=20,end=38,
                                                  n_chains=N_CHAINS,n_iters=N_ITERS,n_warmup=N_WARMUP,
                                                  models_dir =ONLINE_MODELS_DIR)
+write.csv(online_pts_distribution,"report/final_pts_online.csv",row.names = FALSE)
 online_final_table<- data.frame(Team= teams,
                                  Pts_mean=NA,
                                  Pts_mode=NA,

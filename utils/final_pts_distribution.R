@@ -66,6 +66,6 @@ final_pts_distribution<- function(teams,start=20,end=38,
     cat("-------------------------------------------------\n")
   }
   #-----------------------------------------------------------------------------
-  # return df
+  # (4) Return the df
   return(teams_pts)
 }

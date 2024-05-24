@@ -36,7 +36,7 @@ teams<- str_replace_all(teams, " ", "")
 #-------------------------------------------------------------------------------
 # Online Model
 BS_ts<- data.frame(matchday=20:n_matchdays,
-                   BS=NA,
+                   BS_offline=NA,
                    BS_online=NA)
 for(m in 20:n_matchdays){
   cat(paste0("Computing Brier Score for matchday",m,"\n"))
@@ -58,7 +58,7 @@ for(m in 20:n_matchdays){
     # Given the real result, update Real result dummies (deltaH,deltaD,deltaA)
     test_set[mm,paste("delta",FTR,sep="")]=1
   }
-  BS_ts$BS[m-19] = sum((HDA_probs - as.numeric(test_set[mm,c("deltaH","deltaD","deltaA")]))^2)/nrow(test_set)
+  BS_ts$BS_offline[m-19] = sum((HDA_probs - as.numeric(test_set[mm,c("deltaH","deltaD","deltaA")]))^2)/nrow(test_set)
 }
 
 
@@ -87,10 +87,10 @@ for(m in 20:n_matchdays){
 
 
 BS_ts %>% 
-  pivot_longer(cols=c(BS,BS_online),
-               names_to = "bs",
-               values_to = "value") %>%
-  ggplot(aes(x=matchday,y=value,color=bs))+
+  pivot_longer(cols=c(BS_offline,BS_online),
+               names_to = "BS",
+               values_to = "Value") %>%
+  ggplot(aes(x=matchday,y=Value,color=BS))+
   geom_line(linewidth=1)+
   ggtitle("Brier score over time for the 2 models")
   
