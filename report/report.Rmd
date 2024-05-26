@@ -1453,15 +1453,22 @@ for (t in 1:n_teams){
 ```{r,echo=F}
 color_scheme_set("brightblue")
 # Lazy passages to re-order columns basing on their mean
-ordered_teams<- final_pts_offline %>%
+ordered_teams_offline<- final_pts_offline %>%
+  summarise_all(mean) %>%
+  round() %>%
+  gather() %>%
+  arrange(desc(value)) %>%
+  pull(key)
+
+ordered_teams_online<- final_pts_online %>%
   summarise_all(mean) %>%
   round() %>%
   gather() %>%
   arrange(desc(value)) %>%
   pull(key)
 # Reorder columns based on mean points
-final_pts_offline <- final_pts_offline[, ordered_teams]
-final_pts_online <- final_pts_online[, ordered_teams]
+final_pts_offline <- final_pts_offline[, ordered_teams_offline]
+final_pts_online <- final_pts_online[, ordered_teams_online]
 ```
 
 
