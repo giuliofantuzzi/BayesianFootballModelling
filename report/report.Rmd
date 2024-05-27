@@ -193,7 +193,7 @@ SerieA_data %>%
   ggplot(aes(x = reorder(FinalResult, -n), y = n/nrow(SerieA_data), fill = FinalResult)) + 
   geom_bar(stat = "identity",col="black") +
   theme_minimal() + 
-  labs(x = "", y = "Frequency", title = "Type of Victory",fill = "Match Outcome") +
+  labs(x = "", y = "Frequency", title = "Type of match outcome",fill = "Match Outcome") +
   scale_fill_manual(values = c("HomeWin" = "#2A6426",
                                "AwayWin" = "#B0F1AC",
                                "Draw" = "#4FB448"))+
