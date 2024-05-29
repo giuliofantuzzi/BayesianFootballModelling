@@ -1,11 +1,4 @@
-# Bayesian Statistics Final Exam
-
-Repository for the "Bayesian Statistics" course, MSc degree in Data Science & AI (University of Trieste)
-
-| Name | Surname | Student ID | UniTs email | Personal email | Course |
-|:----:|:-------:|:----------:|:-----------:|:--------------:|:------:|
-| Giulio | Fantuzzi | SM3800012 | GIULIO.FANTUZZI@studenti.units.it | giulio.fantuzzi01@gmail.com | DSAI|
----
+# Bayesian modelling of football outcomes using the Skellam distribution
 
 # About
 
@@ -17,7 +10,14 @@ To address this limitation, *Karlis and Ntzoufras* proposed an alternative appro
 
 ---
 
+# Results
+
+This [`report/`](report/) folder contains the findings of a comprehensive analysis of <u>Serie A football league data for the 2021-2022 season</u>. If you want to give a look at my results, [click here](report/report.html)
+
+---
+
 # Project structure
+Given the inherent complexity of the analysis at hand, my project is structured into several directories, each serving a specific purpose in the data collection, analysis, and modeling process.
 
 ```
 📂 BayesianExam/
@@ -74,24 +74,24 @@ To address this limitation, *Karlis and Ntzoufras* proposed an alternative appro
 └── Predictions.R
 ```
 
-This report presents the findings of a comprehensive analysis of <u>Serie A football league data for the 2021-2022 season</u>. Given the inherent complexity of the analysis at hand, my project is structured into several directories, each serving a specific purpose in the data collection, analysis, and modeling process.
+Some notes:
 
-1. `data/` is organised in subfolders for specific seasons, containing the raw data collected from [football-data.co.uk](https://www.football-data.co.uk). 
+1. [`data/`](data/) is organised in subfolders for specific seasons, containing the raw data collected from [football-data.co.uk](https://www.football-data.co.uk). 
 
-2. `web-scraping/` contains a python web scraper (`scraper.py`) to automatically retrieve and download datasets for all major European teams. By executing the scraper from the terminal and providing the desired season, users can download datasets for analysis. Example of usage:
+2. [`web-scraping/`](web-scraping/) contains a python web scraper (`scraper.py`) to automatically retrieve and download datasets for all major European teams. By executing the scraper from the terminal and providing the desired season, users can download datasets for analysis. Example of usage:
     ```bash
     python3 scraper.py <season> #e.g 2122
     ```
 
 
-3. `stan/` contains the Stan models used for statistical modeling. Two models are included:
+3. [`stan/`](stan/) contains the Stan models used for statistical modeling. Two models are included:
     - `karlis-ntzoufras.stan`: the standard version proposed by the authors. From now on in the report, we will refer to it as the "offline" model;
     - `online.stan`: the online-learning framework version of the model.
     
-4. `utils/` simply contains some custom helper functions utilized throughout the analysis process
+4. [`utils/`](utils/) simply contains some custom helper functions utilized throughout the analysis process
 
-5. `report/` contains the final report file, where the results of the analysis are documented and presented.
+5.  [`report/`](report/) contains the final report file, where the results of the analysis are documented and presented.
 
-6. `estimated_models/` contains the fitted models as `.rds` files. Like the `data/` directory, it is organized in season-specific subfolders. Since I wanted to store the "offline" models separately from the "online" ones, I further increase the depth of my subfolders, and I also stored the models by matchday (I hope it will be intuitive)
+6.  [`estimated_models/`](estimated_models/) contains the fitted models as `.rds` files. Like the `data/` directory, it is organized in season-specific subfolders. Since I wanted to store the "offline" models separately from the "online" ones, I further increase the depth of my subfolders, and I also stored the models by matchday (I hope it will be intuitive)
 
 In addition to these directories, various `R` scripts are available, each corresponding to different stages of the analysis pipeline. These scripts facilitate data cleaning, exploration, modeling, and visualization, contributing to a structured and reproducible workflow. The following sections detail the methodology employed, the results obtained from statistical modeling, and insights derived from the analysis of Serie A 2021-2022 data.
