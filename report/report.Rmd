@@ -432,7 +432,7 @@ GD_{i,j} \sim Skellam\left(\theta^{(H)}_{(i,j)},\theta^{(A)}_{(i,j)}\right)
 with:
 \begin{align*}
 \theta^{(H)}_{(i,j)} &= \exp\{\mu + h_{eff} + att_{(i)} + def_{(j)}\}\\[0.2cm]
-\theta^{(A)}_{(i,j)} &= \exp\{\mu + + att_{(j)} + def_{(i)}\}
+\theta^{(A)}_{(i,j)} &= \exp\{\mu + att_{(j)} + def_{(i)}\}
 \end{align*}
 
 Under the above parametrization, all parameters have a straightforward interpretation:
