@@ -49,7 +49,7 @@ for(m in 19:n_matchdays){
   training<- SerieA_data[1:(10*m),c("HomeTeam","AwayTeam","FTHG","FTAG")]
   training<- na.omit(training)
   # (2) Prepare the parameters for stan
-  stan_paramters = list(
+  stan_parameters = list(
     n_teams=n_teams,
     n_games=nrow(training),
     home_team= ht[1:nrow(training)],
@@ -59,7 +59,7 @@ for(m in 19:n_matchdays){
   # (3) Fit the model
   cat("...Fitting the model...\n")
   KN_model <- stan(file = paste0(STAN_DIR,"karlis-ntzoufras.stan"),
-                   data = stan_paramters,
+                   data = stan_parameters,
                    chains = N_CHAINS,
                    iter = N_ITERS,
                    warmup = N_WARMUP,
