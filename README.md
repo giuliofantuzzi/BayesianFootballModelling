@@ -12,7 +12,7 @@ To address this limitation, *Karlis and Ntzoufras* proposed an alternative appro
 
 # Results
 
-This [`report/`](report/) folder contains the findings of a comprehensive analysis of <u>Serie A football league data for the 2021-2022 season</u>. If you want to give a look at my results, [click here](https://giuliofantuzzi.github.io/BayesianExam/report/report.html)
+This [`report/`](report/) folder contains the findings of a comprehensive analysis of <u>Serie A football league data for the 2021-2022 season</u>. If you want to give a look at my results, [click here](https://giuliofantuzzi.github.io/BayesianFootballModelling/report/report.html)
 
 ---
 
